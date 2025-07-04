@@ -3,7 +3,8 @@ from utils.file_handler import FileHandler
 class TaskManager:
     def __init__(self):
         self.file_handler = FileHandler()
-        self.tasks = self.file_handler.load_tasks()
+        raw_tasks = self.file_handler.load_tasks()
+        self.tasks = self._convert_old_tasks(raw_tasks)
 
     def add_task(self, task):
         task_obj = {
@@ -11,7 +12,7 @@ class TaskManager:
             "completed": False
         }
 
-        self.tasks.append(task)
+        self.tasks.append(task_obj)
         self.file_handler.save_tasks(self.tasks)
 
     def delete_task(self, index):
