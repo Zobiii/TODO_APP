@@ -17,7 +17,7 @@ If you discover a security vulnerability in this project, **please do not open a
 Instead, send a private message to the maintainer:
 
 - ✉️ **Email**: lechnertobias.prv@gmail.com
-- Or open a [GitHub private discussion](https://github.com/zobiii/todo_app/discussions)
+- Or open a [GitHub private discussion](https://github.com/Zobiii/todo_app/issues)
 
 Please include as much detail as possible so we can quickly verify and address the issue.
 
