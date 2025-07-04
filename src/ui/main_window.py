@@ -15,7 +15,7 @@ class ToDoWindow:
 
     def setup_window(self):
         self.root.title("✓ Meine ToDo-Liste")
-        self.root.geometry("700x400")
+        self.root.geometry("800x600")
         self.root.configure(bg=self.styles.bg_color)
 
     def create_widgets(self):
@@ -77,11 +77,29 @@ class ToDoWindow:
         self.task_listbox.pack(side='left', fill='both', expand=True)
         scrollbar.config(command=self.task_listbox.yview)
 
+        self.task_listbox.bind('<Double-1>', lambda e: self.toggle_task_completion())
+
         button_frame = tk.Frame(self.root, bg=self.styles.bg_color)
         button_frame.pack(pady=10, padx=20, fill='x')
 
+        first_row = tk.Frame(button_frame, bg=self.styles.bg_color)
+        first_row.pack(fill='x', pady=(0, 5))
+
+        self.toggle_button = tk.Button(
+            first_row,
+            text="✅ Erledigt",
+            command=self.toggle_task_completion,
+            font=self.styles.button_font,
+            bg=self.styles.success_color,
+            fg='white',
+            relief='flat',
+            padx=15,
+            cursor='hand2'
+        )
+        self.toggle_button.pack(side='left')
+
         self.delete_button = tk.Button(
-            button_frame, 
+            first_row, 
             text="🗑️ Löschen", 
             command=self.delete_task,
             font=self.styles.button_font,
@@ -91,10 +109,13 @@ class ToDoWindow:
             padx=15,
             cursor='hand2'
         )
-        self.delete_button.pack(side='left')
+        self.delete_button.pack(side='left', padx=(10, 0))
+
+        second_row = tk.Frame(button_frame, bg=self.styles.bg_color)
+        second_row.pack(fill='x')
 
         self.clear_button = tk.Button(
-            button_frame, 
+            second_row, 
             text="🧹 Alle löschen", 
             command=self.clear_all_tasks,
             font=self.styles.button_font,
@@ -104,11 +125,24 @@ class ToDoWindow:
             padx=15,
             cursor='hand2'
         )
-        self.clear_button.pack(side='left', padx=(10, 0))
+        self.clear_button.pack(side='left')
+
+        self.clear_completed_button = tk.Button(
+            second_row,
+            text="🗂️ Erledigte löschen",
+            command=self.clear_completed_tasks,
+            font=self.styles.button_font,
+            bg=self.styles.info_color,
+            fg='white',
+            relief='flat',
+            padx=15,
+            cursor='hand2'
+        )
+        self.clear_completed_button.pack(side='left', padx=(10, 0))
 
         # Task Counter
         self.counter_label = tk.Label(
-            button_frame,
+            second_row,
             text="",
             font=("Arial", 9),
             bg=self.styles.bg_color,
@@ -125,15 +159,17 @@ class ToDoWindow:
         def on_leave(e, button, original_color):
             button.config(bg=original_color)
 
-        # Hover-Effekte für Buttons
-        self.add_button.bind("<Enter>", lambda e: on_enter(e, self.add_button, '#45a049'))
-        self.add_button.bind("<Leave>", lambda e: on_leave(e, self.add_button, self.styles.primary_color))
-        
-        self.delete_button.bind("<Enter>", lambda e: on_enter(e, self.delete_button, '#da190b'))
-        self.delete_button.bind("<Leave>", lambda e: on_leave(e, self.delete_button, self.styles.danger_color))
-        
-        self.clear_button.bind("<Enter>", lambda e: on_enter(e, self.clear_button, '#e68900'))
-        self.clear_button.bind("<Leave>", lambda e: on_leave(e, self.clear_button, self.styles.warning_color))
+        buttons = [
+            (self.add_button, '#45a049', self.styles.primary_color),
+            (self.toggle_button, '#28a745', self.styles.success_color),  
+            (self.delete_button, '#da190b', self.styles.danger_color),
+            (self.clear_button, '#e68900', self.styles.warning_color),
+            (self.clear_completed_button, '#138496', self.styles.info_color)  
+        ]
+
+        for button, hover_color, original_color in buttons:
+            button.bind("<Enter>", lambda e, b=button, hc=hover_color: on_enter(e, b, hc))
+            button.bind("<Leave>", lambda e, b=button, oc=original_color: on_leave(e, b, oc))
 
     def add_task(self):
         task = self.task_entry.get().strip()
@@ -162,8 +198,36 @@ class ToDoWindow:
     def refresh_listbox(self):
         self.task_listbox.delete(0, tk.END)
         tasks = self.task_manager.get_tasks()
+
         for i, task in enumerate(tasks, 1):
-            self.task_listbox.insert(tk.END, f"{i}. {task}")
-        
-        task_count = len(tasks)
-        self.counter_label.config(text=f"📊 {task_count} Aufgabe(n)")
+            if task["completed"]:
+                display_text = f"✅ {i}. {task['text']}"
+                self.task_listbox.insert(tk.END, display_text)
+                self.task_listbox.itemconfig(i-1, {'fg': self.styles.completed_color})
+            else:
+                display_text = f"⏳ {i}. {task['text']}"
+                self.task_listbox.insert(tk.END, display_text)
+        total_count = len(tasks)
+        completed_count = self.task_manager.get_completed_count()
+        pending_count =  self.task_manager.get_pending_count()
+
+        counter_text = f"📊 Gesamt: {total_count} | ✅ Erledigt: {completed_count} | ⏳ Offen: {pending_count}"
+        self.counter_label.config(text=counter_text)
+
+    def toggle_task_completion(self):
+        selected = self.task_listbox.curselection()
+        if selected:
+            self.task_manager.toggle_task_completion(selected[0])
+            self.refresh_listbox()
+        else:
+            messagebox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
+    
+    def clear_completed_tasks(self):
+        completed_count = self.task_manager.get_completed_count()
+        if completed_count > 0:
+            result = messagebox.askyesno("Bestätigung", f"{completed_count} erledigte Aufgaben löschen?")
+            if result:
+                self.task_manager.clear_completed_tasks()
+                self.refresh_listbox()
+        else:
+            messagebox.showinfo("Info", "Keine erledigten Aufgaben vorhanden!")
