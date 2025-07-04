@@ -174,6 +174,7 @@ class ToDoWindow:
     def add_task(self):
         task = self.task_entry.get().strip()
         if task:
+            print(f"[MainWindow] Adding task: {task}")
             self.task_manager.add_task(task)
             self.task_entry.delete(0, tk.END)
             self.refresh_listbox()
@@ -183,12 +184,14 @@ class ToDoWindow:
     def delete_task(self):
         selected = self.task_listbox.curselection()
         if selected:
+            print(f"[MainWindow] Deleting task at index: {selected}")
             self.task_manager.delete_task(selected[0])
             self.refresh_listbox()
         else:
             messagebox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
 
     def clear_all_tasks(self):
+        print("[MainWindow] Clearing all tasks.")
         if self.task_manager.has_tasks():
             result = messagebox.askyesno("Bestätigung", "Alle Aufgaben löschen?")
             if result:
@@ -196,6 +199,7 @@ class ToDoWindow:
                 self.refresh_listbox()
 
     def refresh_listbox(self):
+        print("[MainWindow] Refreshing task list.")
         self.task_listbox.delete(0, tk.END)
         tasks = self.task_manager.get_tasks()
 
@@ -217,12 +221,14 @@ class ToDoWindow:
     def toggle_task_completion(self):
         selected = self.task_listbox.curselection()
         if selected:
+            print("[MainWindow] Toggling task completion.")
             self.task_manager.toggle_task_completion(selected[0])
             self.refresh_listbox()
         else:
             messagebox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
     
     def clear_completed_tasks(self):
+        print("[MainWindow] Clearing completed tasks.")
         completed_count = self.task_manager.get_completed_count()
         if completed_count > 0:
             result = messagebox.askyesno("Bestätigung", f"{completed_count} erledigte Aufgaben löschen?")

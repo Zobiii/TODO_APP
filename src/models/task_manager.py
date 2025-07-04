@@ -7,6 +7,7 @@ class TaskManager:
         self.tasks = self._convert_old_tasks(raw_tasks)
 
     def add_task(self, task):
+        print(f"[TaskManager] Adding task: {task}")
         task_obj = {
             "text": task,
             "completed": False
@@ -16,11 +17,13 @@ class TaskManager:
         self.file_handler.save_tasks(self.tasks)
 
     def delete_task(self, index):
+        print(f"[TaskManager] Deleting task at index: {index}")
         if 0 <= index < len(self.tasks):
             del self.tasks[index]
             self.file_handler.save_tasks(self.tasks)
 
     def clear_all_tasks(self):
+        print("[TaskManager] Clearing all tasks.")
         self.tasks.clear()
         self.file_handler.save_tasks(self.tasks)
 
@@ -31,6 +34,7 @@ class TaskManager:
         return len(self.tasks) > 0
     
     def toggle_task_completion(self, index):
+        print(f"[TaskManager] Toggling completion for task at index: {index}")
         if 0 <= index < len(self.tasks):
             self.tasks[index]["completed"] = not self.tasks[index]["completed"]
             self.file_handler.save_tasks(self.tasks)
