@@ -28,17 +28,19 @@ The UI is designed with simplicity in mind:
 ---
 
 ## 📁 Project Structure
+```plaintext
 src/
-├── main.py # Entry point for the app
+├── main.py               # Entry point for the app
 ├── files/
-│ └── tasks.json # Local task storage (auto-created)
+│   └── tasks.json        # Local task storage (auto-created)
 ├── models/
-│ └── task_manager.py # Core logic for task handling
+│   └── task_manager.py   # Core logic for task handling
 ├── ui/
-│ ├── main_window.py # Main application window and event handling
-│ └── styles.py # Color and font definitions
+│   ├── main_window.py    # Main application window and event handling
+│   └── styles.py         # Color and font definitions
 └── utils/
-  └── file_handler.py # Reads and writes tasks to disk
+    └── file_handler.py   # Reads and writes tasks to disk
+```
 
 
 ---
