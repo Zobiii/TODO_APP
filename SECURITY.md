@@ -6,7 +6,8 @@ The following versions of this project are currently supported with security upd
 
 | Version | Supported          |
 |---------|--------------------|
-| 0.x     | ✅ Yes              |
+| 1.x.x     | ✅ Yes           |
+| 0.x.x   | ❌ No              |
 
 ---
 
