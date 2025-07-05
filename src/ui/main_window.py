@@ -180,7 +180,7 @@ class ToDoWindow(QMainWindow):
             self.task_input.clear()
             self.refresh_listbox()
         else:
-            QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe eingeben!")
+            QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe eingeben!")
 
     def delete_task(self):
         selected_items = self.task_list.selectedItems()
