@@ -1,14 +1,14 @@
-import tkinter as tk
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
 from ui.main_window import ToDoWindow
 
 def main():
     print("[Main] Starting the application...")
-    root = tk.Tk()
-    print("[Main] Tkinter root window created.")
-    app = ToDoWindow(root)
-    print("[Main] ToDoWindow initialized.")
-    root.mainloop()
-    print("[Main] Application main loop terminated.")
+    app = QApplication([])
+    app.setWindowIcon(QIcon("c:/Users/lechn/Desktop/todo_app/assets/notepad_icon.png"))
+    window = ToDoWindow()
+    window.show()
+    app.exec()
 
 if __name__ == "__main__":
     print("[Main] Running main funtion.")
