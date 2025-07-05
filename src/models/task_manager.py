@@ -1,65 +1,66 @@
-from utils.file_handler import FileHandler
+from utils.database_handler import DatabaseHandler
+
 
 class TaskManager:
     def __init__(self):
-        self.file_handler = FileHandler()
-        raw_tasks = self.file_handler.load_tasks()
-        self.tasks = self._convert_old_tasks(raw_tasks)
+        self.db_handler = DatabaseHandler()
+        self.tasks = self._load_tasks()
+
+    def _load_tasks(self):
+        raw_tasks = self.db_handler.get_all_tasks()
+        return [
+            {"id": task[0], "text": task[1], "completed": task[2]} for task in raw_tasks
+        ]
 
     def add_task(self, task):
         print(f"[TaskManager] Adding task: {task}")
-        task_obj = {
-            "text": task,
-            "completed": False
-        }
-
-        self.tasks.append(task_obj)
-        self.file_handler.save_tasks(self.tasks)
+        self.db_handler.add_task(task)
+        self.tasks = self._load_tasks()
 
     def delete_task(self, index):
         print(f"[TaskManager] Deleting task at index: {index}")
         if 0 <= index < len(self.tasks):
-            del self.tasks[index]
-            self.file_handler.save_tasks(self.tasks)
+            task_id = self.tasks[index]["id"]
+            self.db_handler.delete_task(task_id)
+            self.tasks = self._load_tasks()
 
     def clear_all_tasks(self):
         print("[TaskManager] Clearing all tasks.")
-        self.tasks.clear()
-        self.file_handler.save_tasks(self.tasks)
+        self.db_handler.clear_all_tasks()
+        self.tasks = self._load_tasks()
 
     def get_tasks(self):
-        return self.tasks
+        raw_tasks = self.db_handler.get_all_tasks()
+        return [
+            {"id": task[0], "text": task[1], "completed": task[2]} for task in raw_tasks
+        ]
 
     def has_tasks(self):
-        return len(self.tasks) > 0
-    
+        task_count = self.db_handler.connection.execute(
+            "SELECT COUNT(*) FROM tasks"
+        ).fetchone()
+        return task_count[0] > 0 if task_count else False
+
     def toggle_task_completion(self, index):
         print(f"[TaskManager] Toggling completion for task at index: {index}")
         if 0 <= index < len(self.tasks):
-            self.tasks[index]["completed"] = not self.tasks[index]["completed"]
-            self.file_handler.save_tasks(self.tasks)
+            task = self.tasks[index]
+            self.db_handler.update_task_completion(task["id"], not task["completed"])
+            self.tasks = self._load_tasks()
 
     def clear_completed_tasks(self):
-        self.tasks = [task for task in self.tasks if not task["completed"]]
-        self.file_handler.save_tasks(self.tasks)
+        print("[TaskManager] Clearing completed tasks.")
+        self.db_handler.clear_completed_tasks()
+        self.tasks = self._load_tasks()
 
     def get_completed_count(self):
-        return sum(1 for task in self.tasks if task["completed"])
-    
+        completed_tasks = self.db_handler.connection.execute(
+            "SELECT COUNT(*) FROM tasks WHERE completed = ?", (True,)
+        ).fetchone()
+        return completed_tasks[0] if completed_tasks else 0
+
     def get_pending_count(self):
-        return sum(1 for task in self.tasks if not task["completed"])
-    
-    def _convert_old_tasks(self, tasks):
-        """Konvertiert alte String-Tasks zu neuen Task-Objekten"""
-        converted_tasks = []
-        for task in tasks:
-            if isinstance(task, str):
-                # Alte String-Tasks zu Objekten konvertieren
-                converted_tasks.append({
-                    "text": task,
-                    "completed": False
-                })
-            elif isinstance(task, dict):
-                # Neue Task-Objekte bleiben unverändert
-                converted_tasks.append(task)
-        return converted_tasks
+        pending_tasks = self.db_handler.connection.execute(
+            "SELECT COUNT(*) FROM tasks WHERE completed = ?", (False,)
+        ).fetchone()
+        return pending_tasks[0] if pending_tasks else 0

@@ -1,8 +1,20 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QListWidget, QLineEdit, QMessageBox, QLabel, QScrollBar
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QPushButton,
+    QListWidget,
+    QLineEdit,
+    QMessageBox,
+    QLabel,
+    QScrollBar,
+)
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 from models.task_manager import TaskManager
 from ui.styles import AppStyles
+
 
 class ToDoWindow(QMainWindow):
     def __init__(self):
@@ -12,7 +24,9 @@ class ToDoWindow(QMainWindow):
 
         self.setWindowTitle("ToDo-Liste")
         self.setGeometry(100, 100, 800, 600)
-        self.setStyleSheet(f"background-color: {self.styles.bg_color}; color: {self.styles.text_color};")
+        self.setStyleSheet(
+            f"background-color: {self.styles.bg_color}; color: {self.styles.text_color};"
+        )
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -33,7 +47,8 @@ class ToDoWindow(QMainWindow):
         input_frame = QVBoxLayout()
         self.task_input = QLineEdit()
         self.task_input.setPlaceholderText("Neue Aufgabe hinzufügen...")
-        self.task_input.setStyleSheet(f"""
+        self.task_input.setStyleSheet(
+            f"""
             QLineEdit {{
                 background-color: {self.styles.bg_color};
                 border: 2px solid {self.styles.primary_color};
@@ -42,12 +57,14 @@ class ToDoWindow(QMainWindow):
                 font-size: 16px;
                 color: {self.styles.text_color};
             }}
-        """)
+        """
+        )
         self.task_input.returnPressed.connect(self.add_task)
         input_frame.addWidget(self.task_input)
 
         self.add_button = QPushButton("➕ Hinzufügen")
-        self.add_button.setStyleSheet(f"""
+        self.add_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.styles.primary_color};
                 border: none;
@@ -59,7 +76,8 @@ class ToDoWindow(QMainWindow):
             QPushButton:hover {{
                 background-color: #2980b9;
             }}
-        """)
+        """
+        )
         self.add_button.clicked.connect(self.add_task)
         input_frame.addWidget(self.add_button)
 
@@ -68,7 +86,8 @@ class ToDoWindow(QMainWindow):
         # Aufgabenliste mit Scrollbar
         list_frame = QVBoxLayout()
         self.task_list = QListWidget()
-        self.task_list.setStyleSheet(f"""
+        self.task_list.setStyleSheet(
+            f"""
             QListWidget {{
                 background-color: {self.styles.bg_color};
                 border: 1px solid {self.styles.secondary_color};
@@ -81,12 +100,15 @@ class ToDoWindow(QMainWindow):
                 background-color: {self.styles.secondary_color};
                 color: white;
             }}
-        """)
+        """
+        )
         self.task_list.itemDoubleClicked.connect(self.toggle_task_completion)
         list_frame.addWidget(self.task_list)
 
         self.task_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.task_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.task_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
 
         self.layout.addLayout(list_frame)
 
@@ -95,7 +117,8 @@ class ToDoWindow(QMainWindow):
 
         first_row = QVBoxLayout()
         self.toggle_button = QPushButton("✅ Erledigt")
-        self.toggle_button.setStyleSheet(f"""
+        self.toggle_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.styles.success_color};
                 border: none;
@@ -107,12 +130,14 @@ class ToDoWindow(QMainWindow):
             QPushButton:hover {{
                 background-color: #1e7e34;
             }}
-        """)
+        """
+        )
         self.toggle_button.clicked.connect(self.toggle_task_completion)
         first_row.addWidget(self.toggle_button)
 
         self.delete_button = QPushButton("🗑️ Löschen")
-        self.delete_button.setStyleSheet(f"""
+        self.delete_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.styles.danger_color};
                 border: none;
@@ -124,7 +149,8 @@ class ToDoWindow(QMainWindow):
             QPushButton:hover {{
                 background-color: #c0392b;
             }}
-        """)
+        """
+        )
         self.delete_button.clicked.connect(self.delete_task)
         first_row.addWidget(self.delete_button)
 
@@ -132,7 +158,8 @@ class ToDoWindow(QMainWindow):
 
         second_row = QVBoxLayout()
         self.clear_button = QPushButton("🧹 Alle löschen")
-        self.clear_button.setStyleSheet(f"""
+        self.clear_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.styles.warning_color};
                 border: none;
@@ -144,12 +171,14 @@ class ToDoWindow(QMainWindow):
             QPushButton:hover {{
                 background-color: #e68900;
             }}
-        """)
+        """
+        )
         self.clear_button.clicked.connect(self.clear_all_tasks)
         second_row.addWidget(self.clear_button)
 
         self.clear_completed_button = QPushButton("🗂️ Erledigte löschen")
-        self.clear_completed_button.setStyleSheet(f"""
+        self.clear_completed_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.styles.info_color};
                 border: none;
@@ -161,12 +190,15 @@ class ToDoWindow(QMainWindow):
             QPushButton:hover {{
                 background-color: #138496;
             }}
-        """)
+        """
+        )
         self.clear_completed_button.clicked.connect(self.clear_completed_tasks)
         second_row.addWidget(self.clear_completed_button)
 
         self.counter_label = QLabel("")
-        self.counter_label.setStyleSheet(f"color: {self.styles.text_color}; font-size: 12px;")
+        self.counter_label.setStyleSheet(
+            f"color: {self.styles.text_color}; font-size: 12px;"
+        )
         second_row.addWidget(self.counter_label)
 
         button_frame.addLayout(second_row)
@@ -200,7 +232,7 @@ class ToDoWindow(QMainWindow):
                 self,
                 "Bestätigung",
                 "Alle Aufgaben löschen?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if result == QMessageBox.StandardButton.Yes:
                 self.task_manager.clear_all_tasks()
@@ -209,10 +241,16 @@ class ToDoWindow(QMainWindow):
     def refresh_listbox(self):
         print("[MainWindow] Refreshing task list.")
         self.task_list.clear()
-        tasks = self.task_manager.get_tasks()
+        tasks = self.task_manager.get_tasks()  # Ensure this returns a valid list
+
+        if not isinstance(tasks, list):
+            print("[Error] get_tasks() did not return a list.")
+            tasks = []  # Fallback to an empty list
 
         for i, task in enumerate(tasks, 1):
-            display_text = f"✅ {task['text']}" if task["completed"] else f"⏳ {task['text']}"
+            display_text = (
+                f"✅ {task['text']}" if task["completed"] else f"⏳ {task['text']}"
+            )
             self.task_list.addItem(display_text)
 
         total_count = len(tasks)
@@ -242,7 +280,7 @@ class ToDoWindow(QMainWindow):
             self.refresh_listbox()
         else:
             QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
-    
+
     def clear_completed_tasks(self):
         print("[MainWindow] Clearing completed tasks.")
         completed_count = self.task_manager.get_completed_count()
@@ -251,10 +289,12 @@ class ToDoWindow(QMainWindow):
                 self,
                 "Bestätigung",
                 f"{completed_count} erledigte Aufgaben löschen?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if result == QMessageBox.StandardButton.Yes:
                 self.task_manager.clear_completed_tasks()
                 self.refresh_listbox()
         else:
-            QMessageBox.information(self, "Info", "Keine erledigten Aufgaben vorhanden!")
+            QMessageBox.information(
+                self, "Info", "Keine erledigten Aufgaben vorhanden!"
+            )
