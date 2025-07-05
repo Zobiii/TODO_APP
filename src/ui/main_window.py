@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QLabel,
-    QScrollBar,
+    QInputDialog,
 )
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
@@ -102,7 +102,7 @@ class ToDoWindow(QMainWindow):
             }}
         """
         )
-        self.task_list.itemDoubleClicked.connect(self.toggle_task_completion)
+        self.task_list.itemDoubleClicked.connect(self.edit_task)
         list_frame.addWidget(self.task_list)
 
         self.task_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -217,10 +217,10 @@ class ToDoWindow(QMainWindow):
     def delete_task(self):
         selected_items = self.task_list.selectedItems()
         if selected_items:
-            for item in selected_items:
-                index = self.task_list.row(item)
-                print(f"[MainWindow] Deleting task at index: {index}")
-                self.task_manager.delete_task(index)
+            item = selected_items[0]
+            index = self.task_list.row(item)
+            print(f"[MainWindow] Deleting task at index: {index}")
+            self.task_manager.delete_task(index)
             self.refresh_listbox()
         else:
             QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
@@ -263,9 +263,9 @@ class ToDoWindow(QMainWindow):
     def toggle_task_completion(self):
         selected_items = self.task_list.selectedItems()
         if selected_items:
-            for item in selected_items:
-                print("[MainWindow] Toggling task completion.")
-                self.task_manager.toggle_task_completion(self.task_list.row(item))
+            item = selected_items[0]
+            print("[MainWindow] Toggling task completion.")
+            self.task_manager.toggle_task_completion(self.task_list.row(item))
             self.refresh_listbox()
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
@@ -298,3 +298,21 @@ class ToDoWindow(QMainWindow):
             QMessageBox.information(
                 self, "Info", "Keine erledigten Aufgaben vorhanden!"
             )
+
+    def edit_task(self, item):
+        index = self.task_list.row(item)
+        tasks = self.task_manager.get_tasks()
+
+        if 0 <= index < len(tasks):
+            current_text = tasks[index]["text"]
+
+            new_text, ok = QInputDialog.getText(
+                self, "Aufgabe bearbeiten", "Neuer Text:", text=current_text
+            )
+
+            if ok and new_text.strip():
+                print(
+                    f"[MainWindows] Editing task at index {index} to '{new_text.strip()}'"
+                )
+                self.task_manager.update_task_text(index, new_text.strip())
+                self.refresh_listbox()

@@ -52,3 +52,9 @@ class DatabaseHandler:
     def clear_completed_tasks(self):
         with self.connection:
             self.connection.execute("DELETE FROM tasks WHERE completed = ?", (True,))
+
+    def update_task_text(self, new_text, task_id):
+        with self.connection:
+            self.connection.execute(
+                "UPDATE tasks SET text = ? WHERE id = ?", (new_text, task_id)
+            )

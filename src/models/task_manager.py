@@ -64,3 +64,9 @@ class TaskManager:
             "SELECT COUNT(*) FROM tasks WHERE completed = ?", (False,)
         ).fetchone()
         return pending_tasks[0] if pending_tasks else 0
+
+    def update_task_text(self, index, new_text):
+        tasks = self.get_tasks()
+        if 0 <= index < len(tasks):
+            task_id = tasks[index]["id"]
+            self.db_handler.update_task_text(new_text, task_id)
