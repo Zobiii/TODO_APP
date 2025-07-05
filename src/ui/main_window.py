@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QLabel,
     QInputDialog,
+    QComboBox,
 )
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
@@ -21,6 +22,11 @@ class ToDoWindow(QMainWindow):
         super().__init__()
         self.task_manager = TaskManager()
         self.styles = AppStyles()
+        self.sort_options = {
+            "Sortieren nach: Datum": "id ASC",
+            "Sortieren nach: Alphabet": "text ASC",
+            "Sortieren nach: Status": "completed DESC, id ASC",
+        }
 
         self.setWindowTitle("ToDo-Liste")
         self.setGeometry(100, 100, 800, 600)
@@ -82,6 +88,25 @@ class ToDoWindow(QMainWindow):
         input_frame.addWidget(self.add_button)
 
         self.layout.addLayout(input_frame)
+
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(self.sort_options.keys())
+        self.sort_combo.setStyleSheet(
+            f"""
+            QComboBox {{
+                background-color: {self.styles.bg_color};
+                border: 1px solid {self.styles.secondary_color};
+                border-radius: 5px;
+                padding: 5px;
+                font-size: 14px;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+        """
+        )
+        self.sort_combo.currentIndexChanged.connect(self.refresh_listbox)
+        self.layout.addWidget(self.sort_combo)
 
         # Aufgabenliste mit Scrollbar
         list_frame = QVBoxLayout()
@@ -239,21 +264,30 @@ class ToDoWindow(QMainWindow):
                 self.refresh_listbox()
 
     def refresh_listbox(self):
+        """Aktualisiert die Aufgabenliste basierend auf der aktuellen Sortierung."""
         print("[MainWindow] Refreshing task list.")
+
+        # Ausgewählte Sortieroption aus der ComboBox holen
+        current_sort_text = self.sort_combo.currentText()
+        sort_by_clause = self.sort_options.get(current_sort_text, "id ASC")
+
+        # Aufgabenliste leeren und sortierte Aufgaben vom Manager holen
         self.task_list.clear()
-        tasks = self.task_manager.get_tasks()  # Ensure this returns a valid list
+        tasks = self.task_manager.get_tasks(sort_by=sort_by_clause)
 
         if not isinstance(tasks, list):
             print("[Error] get_tasks() did not return a list.")
-            tasks = []  # Fallback to an empty list
+            tasks = []  # Fallback auf eine leere Liste
 
-        for i, task in enumerate(tasks, 1):
+        # Aufgabenliste mit den sortierten Aufgaben füllen
+        for task in tasks:
             display_text = (
                 f"✅ {task['text']}" if task["completed"] else f"⏳ {task['text']}"
             )
             self.task_list.addItem(display_text)
 
-        total_count = len(tasks)
+        # Zähler aktualisieren
+        total_count = self.task_manager.get_total_count()
         completed_count = self.task_manager.get_completed_count()
         pending_count = self.task_manager.get_pending_count()
 

@@ -39,11 +39,14 @@ class DatabaseHandler:
                 "UPDATE tasks SET completed = ? WHERE id = ?", (completed, task_id)
             )
 
-    def get_all_tasks(self):
+    def get_all_tasks(self, order_by="id ASC"):
+        """
+        Get all tasks, sorted by a specific column.
+        :param order_by: SQL ORDER BY clause (e.g., 'text ASC', 'completed DESC').
+        """
         with self.connection:
-            return self.connection.execute(
-                "SELECT id, text, completed FROM tasks"
-            ).fetchall()
+            query = f"SELECT id, text, completed FROM tasks ORDER BY {order_by}"
+            return self.connection.execute(query).fetchall()
 
     def clear_all_tasks(self):
         with self.connection:
@@ -58,3 +61,9 @@ class DatabaseHandler:
             self.connection.execute(
                 "UPDATE tasks SET text = ? WHERE id = ?", (new_text, task_id)
             )
+
+    def get_total_count(self):
+        """Gibt die Gesamtzahl der Aufgaben zurück."""
+        with self.connection:
+            # fetchone()[0] gibt den ersten Wert der ersten Zeile zurück
+            return self.connection.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]

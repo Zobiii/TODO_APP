@@ -29,11 +29,13 @@ class TaskManager:
         self.db_handler.clear_all_tasks()
         self.tasks = self._load_tasks()
 
-    def get_tasks(self):
-        raw_tasks = self.db_handler.get_all_tasks()
-        return [
-            {"id": task[0], "text": task[1], "completed": task[2]} for task in raw_tasks
+    def get_tasks(self, sort_by="id ASC"):
+        tasks_data = self.db_handler.get_all_tasks(order_by=sort_by)
+        tasks = [
+            {"id": row[0], "text": row[1], "completed": bool(row[2])}
+            for row in tasks_data
         ]
+        return tasks
 
     def has_tasks(self):
         task_count = self.db_handler.connection.execute(
@@ -70,3 +72,6 @@ class TaskManager:
         if 0 <= index < len(tasks):
             task_id = tasks[index]["id"]
             self.db_handler.update_task_text(new_text, task_id)
+
+    def get_total_count(self):
+        return self.db_handler.get_total_count()
