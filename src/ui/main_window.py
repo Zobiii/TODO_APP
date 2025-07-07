@@ -96,27 +96,19 @@ class ToDoWindow(QMainWindow):
                 padding: 10px;
                 font-size: 16px;
                 color: {self.styles.text_color};
-            }}
-            QDateEdit::down-button {{
-                /* Entfernt den Standard-Button-Look vollständig */
-                border: none;
-                background: transparent;
-                padding: 0px;
-                margin: 0px;
-                
-                /* Positioniert den klickbaren Bereich */
+            }}  
+            QDateEdit::drop-down {{
+                border-left: 1px solid gray;
                 subcontrol-origin: padding;
                 subcontrol-position: center right;
-                width: 40px; /* Etwas mehr Platz für das Icon */
+                width: 36px; 
             }}
-            QDateEdit::down-button:hover {{
-                /* Fügt einen dezenten Hover-Effekt hinzu */
-                background-color: {self.styles.secondary_color};
-                border-top-right-radius: 3px;
-                border-bottom-right-radius: 3px;
+            QDateEdit::drop-down:hover {{
+                background-color: {self.styles.primary_color};
+                border-top-right-radius: 20px;
+                border-bottom-right-radius: 20px;
             }}
             QDateEdit::down-arrow {{
-                /* Zentriert das Icon im klickbaren Bereich */
                 image: url({icon_path});
                 width: 20px;
                 height: 20px;
@@ -128,26 +120,41 @@ class ToDoWindow(QMainWindow):
             QCalendarWidget QToolButton {{
                 color: {self.styles.text_color};
                 background-color: transparent;
-                border: none;
-                margin: 5px;
+                border: 2px solid {self.styles.primary_color};
+                border-radius: 16px;
+                margin: 7px;
                 padding: 5px;
             }}
             QCalendarWidget QToolButton:hover {{
                 background-color: {self.styles.secondary_color};
-                border-radius: 3px;
+                border: 2px solid {self.styles.primary_color};
+                border-radius: 16px;
             }}
-            QCalendarWidget QAbstractItemView:enabled {{
+            QCalendarWidget QAbstractItemView {{
+                background-color: transparent;
                 color: {self.styles.text_color};
                 selection-background-color: {self.styles.primary_color};
                 selection-color: white;
+                border: 2px solid {self.styles.primary_color};
+                border-radius: 16px;
+                gridline-color: transparent;
+                padding-bottom: 0px;
+                
             }}
-            QCalendarWidget #qt_calendar_today {{
-                background-color: {self.styles.warning_color};
-                color: white;
-                border-radius: 3px;
+
+            QCalendarWidget QAbstractItemView:item {{
+                background-color:  transparent;
+                padding-bottom: 10px;
+                padding-top: 20px;
+                padding-left: 5px;
+                padding-rigth: 5px;
+            }}
+            QCalendarWidget QAbstractItemView:item:selected {{
+                color: {self.styles.text_color};
             }}
             """
         )
+
         date_button_frame.addWidget(self.due_date_input)
 
         self.add_button = QPushButton("➕ Hinzufügen")
