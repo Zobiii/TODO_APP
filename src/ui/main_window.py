@@ -10,9 +10,11 @@ from PyQt6.QtWidgets import (
     QLabel,
     QInputDialog,
     QComboBox,
+    QDateEdit,
+    QListWidgetItem,
 )
-from PyQt6.QtGui import QFont
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QDate
 from models.task_manager import TaskManager
 from ui.styles import AppStyles
 
@@ -23,7 +25,7 @@ class ToDoWindow(QMainWindow):
         self.task_manager = TaskManager()
         self.styles = AppStyles()
         self.sort_options = {
-            "Sortieren nach: Datum": "id ASC",
+            "Sortieren nach: Datum": "due_date ASC, id ASC",
             "Sortieren nach: Alphabet": "text ASC",
             "Sortieren nach: Status": "completed DESC, id ASC",
         }
@@ -68,6 +70,18 @@ class ToDoWindow(QMainWindow):
         self.task_input.returnPressed.connect(self.add_task)
         input_frame.addWidget(self.task_input)
 
+        date_button_frame = QVBoxLayout()
+
+        self.due_date_input = QDateEdit()
+        self.due_date_input.setCalendarPopup(True)
+        self.due_date_input.setDate(QDate.currentDate())
+        self.due_date_input.setStyleSheet(
+            """
+            QDateEdit { padding: 8px; }
+            """
+        )
+        date_button_frame.addWidget(self.due_date_input)
+
         self.add_button = QPushButton("➕ Hinzufügen")
         self.add_button.setStyleSheet(
             f"""
@@ -86,6 +100,8 @@ class ToDoWindow(QMainWindow):
         )
         self.add_button.clicked.connect(self.add_task)
         input_frame.addWidget(self.add_button)
+
+        input_frame.addLayout(date_button_frame)
 
         self.layout.addLayout(input_frame)
 
@@ -231,9 +247,11 @@ class ToDoWindow(QMainWindow):
 
     def add_task(self):
         task = self.task_input.text().strip()
+        due_date = self.due_date_input.date().toString("yyyy-MM-dd")
+
         if task:
             print(f"[MainWindow] Adding task: {task}")
-            self.task_manager.add_task(task)
+            self.task_manager.add_task(task, due_date)
             self.task_input.clear()
             self.refresh_listbox()
         else:
@@ -243,9 +261,10 @@ class ToDoWindow(QMainWindow):
         selected_items = self.task_list.selectedItems()
         if selected_items:
             item = selected_items[0]
+            task_id = item.data(Qt.ItemDataRole.UserRole)
             index = self.task_list.row(item)
-            print(f"[MainWindow] Deleting task at index: {index}")
-            self.task_manager.delete_task(index)
+            print(f"[MainWindow] Deleting task at index: {task_id}")
+            self.task_manager.delete_task(task_id)
             self.refresh_listbox()
         else:
             QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
@@ -267,26 +286,40 @@ class ToDoWindow(QMainWindow):
         """Aktualisiert die Aufgabenliste basierend auf der aktuellen Sortierung."""
         print("[MainWindow] Refreshing task list.")
 
-        # Ausgewählte Sortieroption aus der ComboBox holen
         current_sort_text = self.sort_combo.currentText()
         sort_by_clause = self.sort_options.get(current_sort_text, "id ASC")
 
-        # Aufgabenliste leeren und sortierte Aufgaben vom Manager holen
         self.task_list.clear()
         tasks = self.task_manager.get_tasks(sort_by=sort_by_clause)
 
         if not isinstance(tasks, list):
             print("[Error] get_tasks() did not return a list.")
-            tasks = []  # Fallback auf eine leere Liste
+            tasks = []
 
-        # Aufgabenliste mit den sortierten Aufgaben füllen
+        today = QDate.currentDate()
         for task in tasks:
+            due_date_str = task.get("due_date")
             display_text = (
                 f"✅ {task['text']}" if task["completed"] else f"⏳ {task['text']}"
             )
-            self.task_list.addItem(display_text)
 
-        # Zähler aktualisieren
+            if due_date_str:
+                display_text += f"  (Fällig: {due_date_str})"
+
+            item = QListWidgetItem(display_text)
+            # Speichere die eindeutige Task-ID im Item
+            item.setData(Qt.ItemDataRole.UserRole, task["id"])
+            self.task_list.addItem(item)
+
+            if due_date_str and not task["completed"]:
+                due_date = QDate.fromString(due_date_str, "yyyy-MM-dd")
+                if due_date.isValid():
+                    if due_date < today:
+                        item.setForeground(QColor(self.styles.danger_color))
+                    elif due_date == today:
+                        item.setForeground(QColor(self.styles.warning_color))
+
+        # Redundanten Codeblock entfernen
         total_count = self.task_manager.get_total_count()
         completed_count = self.task_manager.get_completed_count()
         pending_count = self.task_manager.get_pending_count()
@@ -298,22 +331,12 @@ class ToDoWindow(QMainWindow):
         selected_items = self.task_list.selectedItems()
         if selected_items:
             item = selected_items[0]
+            task_id = item.data(Qt.ItemDataRole.UserRole)
             print("[MainWindow] Toggling task completion.")
-            self.task_manager.toggle_task_completion(self.task_list.row(item))
+            self.task_manager.toggle_task_completion(task_id)
             self.refresh_listbox()
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
-
-    def toggle_task_completion(self):
-        selected_items = self.task_list.selectedItems()
-        if selected_items:
-            for item in selected_items:
-                index = self.task_list.row(item)
-                print("[MainWindow] Toggling task completion.")
-                self.task_manager.toggle_task_completion(index)
-            self.refresh_listbox()
-        else:
-            QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
 
     def clear_completed_tasks(self):
         print("[MainWindow] Clearing completed tasks.")
@@ -334,19 +357,18 @@ class ToDoWindow(QMainWindow):
             )
 
     def edit_task(self, item):
-        index = self.task_list.row(item)
-        tasks = self.task_manager.get_tasks()
+        task_id = item.data(Qt.ItemDataRole.UserRole)
 
-        if 0 <= index < len(tasks):
-            current_text = tasks[index]["text"]
+        all_tasks = self.task_manager.get_tasks()
+        current_task = next((task for task in all_tasks if task["id"] == task_id), None)
 
+        if current_task:
+            current_task = current_task["text"]
             new_text, ok = QInputDialog.getText(
-                self, "Aufgabe bearbeiten", "Neuer Text:", text=current_text
+                self, "Aufgabe bearbeiten", "Neuer Text:", text=current_task
             )
 
             if ok and new_text.strip():
-                print(
-                    f"[MainWindows] Editing task at index {index} to '{new_text.strip()}'"
-                )
-                self.task_manager.update_task_text(index, new_text.strip())
+                print(f"[MainWindow] Editing task {task_id} to '{new_text.strip()}'")
+                self.task_manager.update_task_text(task_id, new_text.strip())
                 self.refresh_listbox()

@@ -12,17 +12,15 @@ class TaskManager:
             {"id": task[0], "text": task[1], "completed": task[2]} for task in raw_tasks
         ]
 
-    def add_task(self, task):
+    def add_task(self, task, due_date=None):
         print(f"[TaskManager] Adding task: {task}")
-        self.db_handler.add_task(task)
+        self.db_handler.add_task(task, due_date)
         self.tasks = self._load_tasks()
 
-    def delete_task(self, index):
-        print(f"[TaskManager] Deleting task at index: {index}")
-        if 0 <= index < len(self.tasks):
-            task_id = self.tasks[index]["id"]
-            self.db_handler.delete_task(task_id)
-            self.tasks = self._load_tasks()
+    def delete_task(self, task_id):
+        print(f"[TaskManager] Deleting task at index: {task_id}")
+        self.db_handler.delete_task(task_id)
+        self.tasks = self._load_tasks()
 
     def clear_all_tasks(self):
         print("[TaskManager] Clearing all tasks.")
@@ -32,7 +30,12 @@ class TaskManager:
     def get_tasks(self, sort_by="id ASC"):
         tasks_data = self.db_handler.get_all_tasks(order_by=sort_by)
         tasks = [
-            {"id": row[0], "text": row[1], "completed": bool(row[2])}
+            {
+                "id": row[0],
+                "text": row[1],
+                "completed": bool(row[2]),
+                "due_date": row[3],
+            }
             for row in tasks_data
         ]
         return tasks
@@ -43,12 +46,15 @@ class TaskManager:
         ).fetchone()
         return task_count[0] > 0 if task_count else False
 
-    def toggle_task_completion(self, index):
-        print(f"[TaskManager] Toggling completion for task at index: {index}")
-        if 0 <= index < len(self.tasks):
-            task = self.tasks[index]
-            self.db_handler.update_task_completion(task["id"], not task["completed"])
-            self.tasks = self._load_tasks()
+    def toggle_task_completion(self, task_id):
+        print(f"[TaskManager] Toggling completion for task at index: {task_id}")
+
+        tasks = self.get_tasks()
+        task = next((t for t in tasks if t["id"] == task_id), None)
+        if task:
+            new_status = not task["completed"]
+            self.db_handler.update_task_completion(task_id, new_status)
+        self._load_tasks()
 
     def clear_completed_tasks(self):
         print("[TaskManager] Clearing completed tasks.")
@@ -67,11 +73,9 @@ class TaskManager:
         ).fetchone()
         return pending_tasks[0] if pending_tasks else 0
 
-    def update_task_text(self, index, new_text):
-        tasks = self.get_tasks()
-        if 0 <= index < len(tasks):
-            task_id = tasks[index]["id"]
-            self.db_handler.update_task_text(new_text, task_id)
+    def update_task_text(self, task_id, new_text):
+        self.db_handler.update_task_text(new_text, task_id)
+        self._load_tasks()
 
     def get_total_count(self):
         return self.db_handler.get_total_count()

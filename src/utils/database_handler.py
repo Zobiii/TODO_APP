@@ -10,6 +10,7 @@ class DatabaseHandler:
         self.db_path = os.path.join(app_folder_path, db_name)
         self.connection = sqlite3.connect(self.db_path)
         self._create_table()
+        self._add_due_date_column_if_not_exists()
 
     def _create_table(self):
         with self.connection:
@@ -18,15 +19,17 @@ class DatabaseHandler:
                 CREATE TABLE IF NOT EXISTS tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     text TEXT NOT NULL,
-                    completed BOOLEAN NOT NULL
+                    completed BOOLEAN NOT NULL,
+                    due_date TEXT
                 )
             """
             )
 
-    def add_task(self, text):
+    def add_task(self, text, due_date=None):
         with self.connection:
             self.connection.execute(
-                "INSERT INTO tasks (text, completed) VALUES (?, ?)", (text, False)
+                "INSERT INTO tasks (text, completed, due_date) VALUES (?, ?, ?)",
+                (text, False, due_date),
             )
 
     def delete_task(self, task_id):
@@ -45,7 +48,9 @@ class DatabaseHandler:
         :param order_by: SQL ORDER BY clause (e.g., 'text ASC', 'completed DESC').
         """
         with self.connection:
-            query = f"SELECT id, text, completed FROM tasks ORDER BY {order_by}"
+            query = (
+                f"SELECT id, text, completed, due_date FROM tasks ORDER BY {order_by}"
+            )
             return self.connection.execute(query).fetchall()
 
     def clear_all_tasks(self):
@@ -67,3 +72,15 @@ class DatabaseHandler:
         with self.connection:
             # fetchone()[0] gibt den ersten Wert der ersten Zeile zurück
             return self.connection.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+
+    def _add_due_date_column_if_not_exists(self):
+        """Prüft, ob die 'due_date' Spalte existiert und fügt sie bei Bedarf hinzu."""
+        with self.connection:
+            cursor = self.connection.cursor()
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if "due_date" not in columns:
+                print("Spalte 'due_date' nicht gefunden. Füge sie hinzu...")
+                cursor.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT")
+                self.connection.commit()
+                print("Spalte 'due_date' zur Datenbank hinzugefügt.")
