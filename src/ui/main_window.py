@@ -12,8 +12,9 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDateEdit,
     QListWidgetItem,
+    QMenu,
 )
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QFont, QColor, QAction
 from PyQt6.QtCore import Qt, QDate
 from models.task_manager import TaskManager
 from ui.styles import AppStyles
@@ -144,59 +145,18 @@ class ToDoWindow(QMainWindow):
         """
         )
         self.task_list.itemDoubleClicked.connect(self.edit_task)
+        self.task_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.task_list.customContextMenuRequested.connect(self.show_context_menu)
         list_frame.addWidget(self.task_list)
 
         self.task_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.task_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-
         self.layout.addLayout(list_frame)
 
         # Buttons für Aktionen
         button_frame = QVBoxLayout()
-
-        first_row = QVBoxLayout()
-        self.toggle_button = QPushButton("✅ Erledigt")
-        self.toggle_button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.styles.success_color};
-                border: none;
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 16px;
-                color: white;
-            }}
-            QPushButton:hover {{
-                background-color: #1e7e34;
-            }}
-        """
-        )
-        self.toggle_button.clicked.connect(self.toggle_task_completion)
-        first_row.addWidget(self.toggle_button)
-
-        self.delete_button = QPushButton("🗑️ Löschen")
-        self.delete_button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.styles.danger_color};
-                border: none;
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 16px;
-                color: white;
-            }}
-            QPushButton:hover {{
-                background-color: #c0392b;
-            }}
-        """
-        )
-        self.delete_button.clicked.connect(self.delete_task)
-        first_row.addWidget(self.delete_button)
-
-        button_frame.addLayout(first_row)
-
         second_row = QVBoxLayout()
         self.clear_button = QPushButton("🧹 Alle löschen")
         self.clear_button.setStyleSheet(
@@ -245,6 +205,69 @@ class ToDoWindow(QMainWindow):
         button_frame.addLayout(second_row)
         self.layout.addLayout(button_frame)
 
+    def show_context_menu(self, position):
+        item = self.task_list.itemAt(position)
+        if not item:
+            return
+
+        task_id = item.data(Qt.ItemDataRole.UserRole)
+        all_tasks = self.task_manager.get_tasks()
+        current_task = next((task for task in all_tasks if task["id"] == task_id), None)
+        if not current_task:
+            return
+
+        context_menu = QMenu(self)
+        context_menu.setStyleSheet(
+            f"""
+            QMenu {{
+                background-color: {self.styles.bg_color};
+                border: 2px solid {self.styles.text_color};
+                border-radius: 5px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 8px 20px;
+                border-radius: 4px;
+                margin: 2px;
+                color: black;
+                border: 1px solid {self.styles.text_color}; /* Rahmen für jeden Button */
+            }}
+            QMenu::item:selected {{
+                background-color: {self.styles.secondary_color};
+                color: white;
+                border: 1px solid {self.styles.text_color}; /* Rahmenfarbe bei Hover anpassen */
+            }}
+            QMenu::separator {{
+                height: 2px;
+                background: {self.styles.text_color};
+                margin: 4px 4px;
+            }}
+            """
+        )
+
+        # Aktion: Erledigen / Rückgängig
+        if not current_task["completed"]:
+            toggle_action = QAction("✅ Als erledigt markieren", self)
+        else:
+            toggle_action = QAction("↩️ Auf 'offen' setzen", self)
+
+        toggle_action.triggered.connect(lambda: self.toggle_task_completion(item))
+        context_menu.addAction(toggle_action)
+
+        # Aktion: Bearbeiten
+        edit_action = QAction("✏️ Bearbeiten", self)
+        edit_action.triggered.connect(lambda: self.edit_task(item))
+        context_menu.addAction(edit_action)
+
+        context_menu.addSeparator()
+
+        # Aktion: Löschen
+        delete_action = QAction("🗑️ Löschen", self)
+        delete_action.triggered.connect(lambda: self.delete_task(item))
+        context_menu.addAction(delete_action)
+
+        context_menu.exec(self.task_list.mapToGlobal(position))
+
     def add_task(self):
         task = self.task_input.text().strip()
         due_date = self.due_date_input.date().toString("yyyy-MM-dd")
@@ -257,17 +280,17 @@ class ToDoWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe eingeben!")
 
-    def delete_task(self):
-        selected_items = self.task_list.selectedItems()
-        if selected_items:
-            item = selected_items[0]
+    def delete_task(self, item=None):
+        if not item:
+            item = self.task_list.currentItem()
+
+        if item:
             task_id = item.data(Qt.ItemDataRole.UserRole)
-            index = self.task_list.row(item)
-            print(f"[MainWindow] Deleting task at index: {task_id}")
+            print(f"[MainWindow] Deleting task with id: {task_id}")
             self.task_manager.delete_task(task_id)
             self.refresh_listbox()
         else:
-            QMessageBox.showwarning("Hinweis", "Bitte eine Aufgabe auswählen!")
+            QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
 
     def clear_all_tasks(self):
         print("[MainWindow] Clearing all tasks.")
@@ -327,10 +350,11 @@ class ToDoWindow(QMainWindow):
         counter_text = f"📊 Gesamt: {total_count} | ✅ Erledigt: {completed_count} | ⏳ Offen: {pending_count}"
         self.counter_label.setText(counter_text)
 
-    def toggle_task_completion(self):
-        selected_items = self.task_list.selectedItems()
-        if selected_items:
-            item = selected_items[0]
+    def toggle_task_completion(self, item=None):
+        if not item:
+            item = self.task_list.currentItem()
+
+        if item:
             task_id = item.data(Qt.ItemDataRole.UserRole)
             print("[MainWindow] Toggling task completion.")
             self.task_manager.toggle_task_completion(task_id)
@@ -357,15 +381,21 @@ class ToDoWindow(QMainWindow):
             )
 
     def edit_task(self, item):
-        task_id = item.data(Qt.ItemDataRole.UserRole)
+        if not item:
+            item = self.task_list.currentItem()
 
+        if not item:
+            QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
+            return
+
+        task_id = item.data(Qt.ItemDataRole.UserRole)
         all_tasks = self.task_manager.get_tasks()
         current_task = next((task for task in all_tasks if task["id"] == task_id), None)
 
         if current_task:
-            current_task = current_task["text"]
+            current_text = current_task["text"]
             new_text, ok = QInputDialog.getText(
-                self, "Aufgabe bearbeiten", "Neuer Text:", text=current_task
+                self, "Aufgabe bearbeiten", "Neuer Text:", text=current_text
             )
 
             if ok and new_text.strip():

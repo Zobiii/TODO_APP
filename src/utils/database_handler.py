@@ -84,3 +84,15 @@ class DatabaseHandler:
                 cursor.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT")
                 self.connection.commit()
                 print("Spalte 'due_date' zur Datenbank hinzugefügt.")
+
+    def get_pending_count(self):
+        with self.connection:
+            return self.connection.execute(
+                "SELECT COUNT(*) FROM tasks WHERE completed = ?", (False,)
+            ).fetchone()[0]
+
+    def get_completed_count(self):
+        with self.connection:
+            return self.connection.execute(
+                "SELECT COUNT(*) FROM tasks WHERE completed = ?", (True,)
+            ).fetchone()[0]
