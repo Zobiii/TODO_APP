@@ -1,3 +1,4 @@
+import os
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -76,9 +77,75 @@ class ToDoWindow(QMainWindow):
         self.due_date_input = QDateEdit()
         self.due_date_input.setCalendarPopup(True)
         self.due_date_input.setDate(QDate.currentDate())
+
+        # Erstelle einen robusten, absoluten Pfad zum Icon
+        script_dir = os.path.dirname(__file__)  # Pfad zum ui-Ordner
+        project_root = os.path.abspath(
+            os.path.join(script_dir, "..", "..")
+        )  # Gehe zwei Ebenen hoch zum Projekt-Root
+        icon_path = os.path.join(project_root, "icons", "calendar.svg").replace(
+            "\\", "/"
+        )
+
         self.due_date_input.setStyleSheet(
-            """
-            QDateEdit { padding: 8px; }
+            f"""
+            QDateEdit {{
+                background-color: {self.styles.bg_color};
+                border: 2px solid {self.styles.primary_color};
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 16px;
+                color: {self.styles.text_color};
+            }}
+            QDateEdit::down-button {{
+                /* Entfernt den Standard-Button-Look vollständig */
+                border: none;
+                background: transparent;
+                padding: 0px;
+                margin: 0px;
+                
+                /* Positioniert den klickbaren Bereich */
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+                width: 40px; /* Etwas mehr Platz für das Icon */
+            }}
+            QDateEdit::down-button:hover {{
+                /* Fügt einen dezenten Hover-Effekt hinzu */
+                background-color: {self.styles.secondary_color};
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }}
+            QDateEdit::down-arrow {{
+                /* Zentriert das Icon im klickbaren Bereich */
+                image: url({icon_path});
+                width: 20px;
+                height: 20px;
+            }}
+            QCalendarWidget QWidget {{
+                background-color: {self.styles.bg_color};
+                color: {self.styles.text_color};
+            }}
+            QCalendarWidget QToolButton {{
+                color: {self.styles.text_color};
+                background-color: transparent;
+                border: none;
+                margin: 5px;
+                padding: 5px;
+            }}
+            QCalendarWidget QToolButton:hover {{
+                background-color: {self.styles.secondary_color};
+                border-radius: 3px;
+            }}
+            QCalendarWidget QAbstractItemView:enabled {{
+                color: {self.styles.text_color};
+                selection-background-color: {self.styles.primary_color};
+                selection-color: white;
+            }}
+            QCalendarWidget #qt_calendar_today {{
+                background-color: {self.styles.warning_color};
+                color: white;
+                border-radius: 3px;
+            }}
             """
         )
         date_button_frame.addWidget(self.due_date_input)
