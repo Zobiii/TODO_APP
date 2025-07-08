@@ -4,3 +4,4 @@ main.spec
 __pycache__
 todo.txt
 todo.db
+todo_app.log

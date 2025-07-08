@@ -1,4 +1,5 @@
 from utils.database_handler import DatabaseHandler
+import logging
 
 
 class TaskManager:
@@ -6,15 +7,15 @@ class TaskManager:
         self.db_handler = DatabaseHandler()
 
     def add_task(self, task, due_date=None):
-        print(f"[TaskManager] Adding task: {task}")
+        logging.info(f"Adding task '{task}' with due date: {due_date}")
         self.db_handler.add_task(task, due_date)
 
     def delete_task(self, task_id):
-        print(f"[TaskManager] Deleting task at index: {task_id}")
+        logging.info(f"Deleting task with id: {task_id}")
         self.db_handler.delete_task(task_id)
 
     def clear_all_tasks(self):
-        print("[TaskManager] Clearing all tasks.")
+        logging.info(f"Deleting all tasks")
         self.db_handler.clear_all_tasks()
 
     def get_tasks(self, sort_by="id ASC"):
@@ -34,7 +35,7 @@ class TaskManager:
         return self.get_total_count() > 0
 
     def toggle_task_completion(self, task_id):
-        print(f"[TaskManager] Toggling completion for task at index: {task_id}")
+        logging.info(f"Toggle completion for task with id: {task_id}")
 
         tasks = self.get_tasks()
         task = next((t for t in tasks if t["id"] == task_id), None)
@@ -43,7 +44,7 @@ class TaskManager:
             self.db_handler.update_task_completion(task_id, new_status)
 
     def clear_completed_tasks(self):
-        print("[TaskManager] Clearing completed tasks.")
+        logging.info(f"Deleting all completed tasks")
         self.db_handler.clear_completed_tasks()
 
     def get_completed_count(self):
@@ -53,6 +54,7 @@ class TaskManager:
         return self.db_handler.get_pending_count()
 
     def update_task_text(self, task_id, new_text):
+        logging.info(f"Update task with id '{task_id}' to: '{new_text}'")
         self.db_handler.update_task_text(new_text, task_id)
 
     def get_total_count(self):
