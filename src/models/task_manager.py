@@ -6,9 +6,11 @@ class TaskManager:
     def __init__(self):
         self.db_handler = DatabaseHandler()
 
-    def add_task(self, task, due_date=None):
-        logging.info(f"Adding task '{task}' with due date: {due_date}")
-        self.db_handler.add_task(task, due_date)
+    def add_task(self, task, due_date=None, category="Allgemein", priority=1):
+        logging.info(
+            f"Adding task '{task}' with due date: {due_date}, category: {category}, priority: {priority}"
+        )
+        self.db_handler.add_task(task, due_date, category, priority)
 
     def delete_task(self, task_id):
         logging.info(f"Deleting task with id: {task_id}")
@@ -18,14 +20,18 @@ class TaskManager:
         logging.info(f"Deleting all tasks")
         self.db_handler.clear_all_tasks()
 
-    def get_tasks(self, sort_by="id ASC"):
-        tasks_data = self.db_handler.get_all_tasks(order_by=sort_by)
+    def get_tasks(self, sort_by="id ASC", category_filter=None):
+        tasks_data = self.db_handler.get_all_tasks(
+            order_by=sort_by, category_filter=category_filter
+        )
         tasks = [
             {
                 "id": row[0],
                 "text": row[1],
                 "completed": bool(row[2]),
                 "due_date": row[3],
+                "category": row[4] if len(row) > 4 else "Allgemein",
+                "priority": row[5] if len(row) > 5 else 1,
             }
             for row in tasks_data
         ]
@@ -59,3 +65,6 @@ class TaskManager:
 
     def get_total_count(self):
         return self.db_handler.get_total_count()
+
+    def get_categories(self):
+        return self.db_handler.get_categories()

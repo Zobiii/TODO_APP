@@ -5,3 +5,4 @@ __pycache__
 todo.txt
 todo.db
 todo_app.log
+create_test_db.py

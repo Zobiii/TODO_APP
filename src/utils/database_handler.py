@@ -13,6 +13,7 @@ class DatabaseHandler:
         self.connection = sqlite3.connect(self.db_path)
         self._create_table()
         self._add_due_date_column_if_not_exists()
+        self._add_category_priority_columns_if_not_exists()
 
     def backup_db(self, backup_path):
         try:
@@ -41,15 +42,17 @@ class DatabaseHandler:
                     text TEXT NOT NULL,
                     completed BOOLEAN NOT NULL,
                     due_date TEXT
+                    category TEXT DEFAULT 'Allgemein',
+                    priority INTEGER DEFAULT 1
                 )
             """
             )
 
-    def add_task(self, text, due_date=None):
+    def add_task(self, text, due_date=None, category="Allgemein", priority=1):
         with self.connection:
             self.connection.execute(
-                "INSERT INTO tasks (text, completed, due_date) VALUES (?, ?, ?)",
-                (text, False, due_date),
+                "INSERT INTO tasks (text, completed, due_date, category, priority) VALUES (?, ?, ?, ?, ?)",
+                (text, False, due_date, category, priority),
             )
 
     def delete_task(self, task_id):
@@ -62,16 +65,14 @@ class DatabaseHandler:
                 "UPDATE tasks SET completed = ? WHERE id = ?", (completed, task_id)
             )
 
-    def get_all_tasks(self, order_by="id ASC"):
-        """
-        Get all tasks, sorted by a specific column.
-        :param order_by: SQL ORDER BY clause (e.g., 'text ASC', 'completed DESC').
-        """
+    def get_all_tasks(self, order_by="id ASC", category_filter=None):
         with self.connection:
-            query = (
-                f"SELECT id, text, completed, due_date FROM tasks ORDER BY {order_by}"
-            )
-            return self.connection.execute(query).fetchall()
+            if category_filter and category_filter != "Alle":
+                query = f"SELECT id, text, completed, due_date, category, priority FROM tasks WHERE category = ? ORDER BY {order_by}"
+                return self.connection.execute(query, (category_filter,)).fetchall()
+            else:
+                query = f"SELECT id, text, completed, due_date, category, priority FROM tasks ORDER BY {order_by}"
+                return self.connection.execute(query).fetchall()
 
     def clear_all_tasks(self):
         with self.connection:
@@ -116,3 +117,34 @@ class DatabaseHandler:
             return self.connection.execute(
                 "SELECT COUNT(*) FROM tasks WHERE completed = ?", (True,)
             ).fetchone()[0]
+
+    def get_categories(self):
+        with self.connection:
+            return [
+                row[0]
+                for row in self.connection.execute(
+                    "SELECT DISTINCT category FROM tasks ORDER BY category"
+                ).fetchall()
+            ]
+
+    def _add_category_priority_columns_if_not_exists(self):
+        with self.connection:
+            cursor = self.connection.cursor()
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [info[1] for info in cursor.fetchall()]
+
+            if "category" not in columns:
+                logging.info("Spalte Category nicht gefunden. Füge hinzu...")
+                cursor.execute(
+                    "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'Allgemein'"
+                )
+                self.connection.commit()
+                logging.info("Spalte Category hinzugefügt")
+
+            if "priority" not in columns:
+                logging.info("Spalte Priority nicht gefunden. Füge hinzu...")
+                cursor.execute(
+                    "ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 1"
+                )
+                self.connection.commit()
+                logging.info("Spalte Priority hinzugefügt")
