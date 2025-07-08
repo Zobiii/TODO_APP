@@ -560,13 +560,11 @@ class ToDoWindow(QMainWindow):
 
         if task:
             self.task_manager.add_task(task, due_date, category, priority)
+            all_tasks = self.task_manager.get_tasks(sort_by="id DESC")
 
-            if task:
-                self.task_manager.add_task(task, due_date, category, priority)
-                all_tasks = self.task_manager.get_tasks(sort_by="id DESC")
-                if all_tasks:
-                    new_task = all_tasks[0]
-                    self.add_task_to_ui(new_task)
+            if all_tasks:
+                new_task = all_tasks[0]
+                self.add_task_to_ui(new_task)
 
             self._reset_input_fields()
             self.status_bar.showMessage("✅ Aufgabe hinzugefügt", 5000)
