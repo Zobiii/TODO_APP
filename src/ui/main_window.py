@@ -1,4 +1,4 @@
-import os
+import os, sys
 from PyQt6.QtWidgets import (
     QMainWindow,
     QVBoxLayout,
@@ -16,10 +16,11 @@ from PyQt6.QtWidgets import (
     QMenu,
     QFileDialog,
 )
-from PyQt6.QtGui import QFont, QColor, QAction
+from PyQt6.QtGui import QFont, QColor, QAction, QIcon
 from PyQt6.QtCore import Qt, QDate
 from models.task_manager import TaskManager
 from ui.styles import AppStyles
+from utils.paths import resource_path
 
 
 class ToDoWindow(QMainWindow):
@@ -307,11 +308,7 @@ class ToDoWindow(QMainWindow):
 
     def _get_date_edit_stylesheet(self):
         """Stylesheet für Datum-Eingabe"""
-        script_dir = os.path.dirname(__file__)
-        project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-        icon_path = os.path.join(project_root, "icons", "calendar.svg").replace(
-            "\\", "/"
-        )
+        icon_path = resource_path("ui/calendar.svg").replace("\\", "/")
 
         return f"""
             QDateEdit {{

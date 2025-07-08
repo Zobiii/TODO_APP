@@ -3,6 +3,7 @@ from PyQt6.QtGui import QIcon
 from ui.main_window import ToDoWindow
 import os
 import logging
+from utils.paths import resource_path
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -15,8 +16,7 @@ def main():
     app = QApplication([])
     logging.info(f"Starting the application")
 
-    base_dir = os.path.dirname(__file__)
-    icon_path = os.path.join(base_dir, "../assets/notepad_icon.png")
+    icon_path = resource_path("notepad_icon.ico")
 
     if not os.path.exists(icon_path):
         logging.warning(f"Icon file not found at: {icon_path}")
