@@ -1,5 +1,7 @@
 import sqlite3
 import os
+import shutil
+import logging
 
 
 class DatabaseHandler:
@@ -11,6 +13,24 @@ class DatabaseHandler:
         self.connection = sqlite3.connect(self.db_path)
         self._create_table()
         self._add_due_date_column_if_not_exists()
+
+    def backup_db(self, backup_path):
+        try:
+            shutil.copy(self.db_path, backup_path)
+            logging.info(f"Backup erfolgreich erstellt: {backup_path}")
+            return True
+        except Exception as e:
+            logging.info(f"Fehler bei der Backuperstellung {e}")
+            return False
+
+    def restore_database(self, backup_path):
+        try:
+            shutil.copy(backup_path, self.db_path)
+            logging.info(f"Backup erfolgreich wiederhergestellt: {backup_path}")
+            return True
+        except Exception as e:
+            logging.info(f"Fehler bei der Wiederherstellung des Backups: {e}")
+            return False
 
     def _create_table(self):
         with self.connection:

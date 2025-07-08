@@ -17,7 +17,11 @@ def main():
 
     base_dir = os.path.dirname(__file__)
     icon_path = os.path.join(base_dir, "../assets/notepad_icon.png")
-    app.setWindowIcon(QIcon(icon_path))
+
+    if not os.path.exists(icon_path):
+        logging.warning(f"Icon file not found at: {icon_path}")
+    else:
+        app.setWindowIcon(QIcon(icon_path))
 
     window = ToDoWindow()
     window.show()

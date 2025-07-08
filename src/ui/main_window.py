@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QDateEdit,
     QListWidgetItem,
     QMenu,
-    QStatusBar,
+    QFileDialog,
 )
 from PyQt6.QtGui import QFont, QColor, QAction
 from PyQt6.QtCore import Qt, QDate
@@ -38,6 +38,8 @@ class ToDoWindow(QMainWindow):
         self.setStyleSheet(
             f"background-color: {self.styles.bg_color}; color: {self.styles.text_color};"
         )
+
+        self.create_menu_bar()
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -356,6 +358,51 @@ class ToDoWindow(QMainWindow):
 
         context_menu.exec(self.task_list.mapToGlobal(position))
 
+    def create_menu_bar(self):
+        menubar = self.menuBar()
+        menubar.setStyleSheet(
+            f"""
+            QMenuBar {{
+                background-color: {self.styles.bg_color};
+                color: {self.styles.text_color};
+                border-bottom: 1px solid {self.styles.secondary_color};
+                padding: 4px;
+            }}
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 8px 12px;
+                border-radius: 4px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {self.styles.secondary_color};
+            }}
+            QMenu {{
+                background-color: {self.styles.bg_color};
+                color: {self.styles.text_color};
+                border: 1px solid {self.styles.secondary_color};
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 8px 20px;
+                border-radius: 4px;
+                margin: 2px;
+            }}
+            QMenu::item:selected {{
+                background-color: {self.styles.secondary_color};
+            }}
+        """
+        )
+
+        backup_menu = menubar.addMenu("Backup")
+        create_backup_action = QAction("📂 Backup erstellen", self)
+        create_backup_action.triggered.connect(self.create_backup)
+        backup_menu.addAction(create_backup_action)
+
+        restore_backup_action = QAction("🔄 Backup wiederherstellen", self)
+        restore_backup_action.triggered.connect(self.restore_backup)
+        backup_menu.addAction(restore_backup_action)
+
     def add_task(self):
         task = self.task_input.text().strip()
         due_date = self.due_date_input.date().toString("yyyy-MM-dd")
@@ -484,3 +531,32 @@ class ToDoWindow(QMainWindow):
             if ok and new_text.strip():
                 self.task_manager.update_task_text(task_id, new_text.strip())
                 self.refresh_listbox()
+
+    def create_backup(self):
+        backup_path, _ = QFileDialog.getSaveFileName(
+            self, "Backup erstellen", "todo_app", "Datenbank (*.db)"
+        )
+        if backup_path:
+            success = self.task_manager.db_handler.backup_db(backup_path)
+            if success:
+                self.status_bar.showMessage("✅ Backup erfolgreich erstellt", 5000)
+            else:
+                QMessageBox.critical(
+                    self, "Fehler", "Backup konnte nicht erstellt werden."
+                )
+
+    def restore_backup(self):
+        backup_path, _ = QFileDialog.getOpenFileName(
+            self, "Backup wiederherstellen", "", "Datenbank (*.db)"
+        )
+        if backup_path:
+            success = self.task_manager.db_handler.restore_database(backup_path)
+            if success:
+                self.refresh_listbox()
+                self.status_bar.showMessage(
+                    "✅ Backup erfolgreich wiederhergestellt", 5000
+                )
+            else:
+                QMessageBox.critical(
+                    self, "Fehler", "Backup konnte nicht wiederhergestellt werden."
+                )
