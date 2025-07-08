@@ -105,8 +105,8 @@ class ToDoWindow(QMainWindow):
             }}
             QDateEdit::drop-down:hover {{
                 background-color: {self.styles.primary_color};
-                border-top-right-radius: 20px;
-                border-bottom-right-radius: 20px;
+                border-top-right-radius: 2px;
+                border-bottom-right-radius: 2px;
             }}
             QDateEdit::down-arrow {{
                 image: url({icon_path});
@@ -130,11 +130,24 @@ class ToDoWindow(QMainWindow):
                 border: 2px solid {self.styles.primary_color};
                 border-radius: 16px;
             }}
+            QCalendarWidget QToolButton::menu-indicator {{
+                image: none;
+            }}
+            QCalendarWidget QMenu {{
+                background-color: {self.styles.bg_color}; 
+                color: {self.styles.text_color}; 
+                border: 2px solid {self.styles.primary_color}; 
+                border-radius: 5px; 
+            }}
+            QCalendarWidget QMenu::item {{
+                padding: 5px 10px; 
+                background-color: transparent; 
+                color: {self.styles.text_color}; 
+                border-bottom: 1px solid {self.styles.primary_color};
+            }}  
             QCalendarWidget QAbstractItemView {{
                 background-color: transparent;
                 color: {self.styles.text_color};
-                selection-background-color: {self.styles.primary_color};
-                selection-color: white;
                 border: 2px solid {self.styles.primary_color};
                 border-radius: 16px;
                 gridline-color: transparent;
@@ -147,10 +160,9 @@ class ToDoWindow(QMainWindow):
                 padding-bottom: 10px;
                 padding-top: 20px;
                 padding-left: 5px;
-                padding-rigth: 5px;
             }}
             QCalendarWidget QAbstractItemView:item:selected {{
-                color: {self.styles.text_color};
+                color: {self.styles.warning_color};
             }}
             """
         )
