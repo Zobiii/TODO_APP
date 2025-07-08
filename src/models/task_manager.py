@@ -68,3 +68,11 @@ class TaskManager:
 
     def get_categories(self):
         return self.db_handler.get_categories()
+
+    def get_task_by_id(self, task_id):
+        """Gibt eine Aufgabe anhand ihrer ID zurück"""
+        query = "SELECT * FROM tasks WHERE id = ?"
+        result = self.db_handler.execute_query(query, (task_id,))
+        if result:
+            return result[0]  # Gibt die erste Aufgabe zurück (sollte eindeutig sein)
+        return None

@@ -1,6 +1,5 @@
 import os
 from PyQt6.QtWidgets import (
-    QApplication,
     QMainWindow,
     QVBoxLayout,
     QHBoxLayout,
@@ -68,7 +67,7 @@ class ToDoWindow(QMainWindow):
     def _initialize_data(self):
         """Lädt initiale Daten"""
         self.refresh_listbox()
-        self.update_category_filter()
+        self._update_category_filter()
 
     # ===== UI CREATION METHODS =====
     def create_widgets(self):
@@ -561,18 +560,18 @@ class ToDoWindow(QMainWindow):
 
         if task:
             self.task_manager.add_task(task, due_date, category, priority)
+
+            if task:
+                self.task_manager.add_task(task, due_date, category, priority)
+                all_tasks = self.task_manager.get_tasks(sort_by="id DESC")
+                if all_tasks:
+                    new_task = all_tasks[0]
+                    self.add_task_to_ui(new_task)
+
             self._reset_input_fields()
             self.status_bar.showMessage("✅ Aufgabe hinzugefügt", 5000)
-            self.refresh_listbox()
-            self.update_category_filter()
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe eingeben!")
-
-    def _reset_input_fields(self):
-        """Setzt die Eingabefelder zurück"""
-        self.task_input.clear()
-        self.category_input.setCurrentText("Allgemein")
-        self.priority_input.setCurrentIndex(1)
 
     def delete_task(self, item=None):
         """Löscht eine Aufgabe"""
@@ -582,8 +581,9 @@ class ToDoWindow(QMainWindow):
         if item:
             task_id = item.data(Qt.ItemDataRole.UserRole)
             self.task_manager.delete_task(task_id)
-            self.refresh_listbox()
-            self.update_category_filter()
+
+            self.remove_task_from_ui(task_id)
+
             self.status_bar.showMessage("🗑️ Aufgabe gelöscht", 5000)
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
@@ -621,7 +621,8 @@ class ToDoWindow(QMainWindow):
 
             if ok and new_text.strip():
                 self.task_manager.update_task_text(task_id, new_text.strip())
-                self.refresh_listbox()
+                updated_task = self.task_manager.get_task_by_id(task_id)
+                self._update_task_in_ui(task_id, updated_task)
 
     def clear_all_tasks(self):
         """Löscht alle Aufgaben"""
@@ -638,7 +639,7 @@ class ToDoWindow(QMainWindow):
                 self.update_category_filter()
 
     def clear_completed_tasks(self):
-        """Löscht alle erledigten Aufgaben"""
+        """Löscht alle erledigten Aufgaben - OPTIMIERT"""
         completed_count = self.task_manager.get_completed_count()
         if completed_count > 0:
             result = QMessageBox.question(
@@ -648,9 +649,11 @@ class ToDoWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if result == QMessageBox.StandardButton.Yes:
+                # Aus der Datenbank löschen
                 self.task_manager.clear_completed_tasks()
-                self.refresh_listbox()
-                self.update_category_filter()
+
+                # Nur erledigte Aufgaben aus der UI entfernen
+                self.clear_completed_tasks_from_ui()
         else:
             QMessageBox.information(
                 self, "Info", "Keine erledigten Aufgaben vorhanden!"
@@ -662,56 +665,6 @@ class ToDoWindow(QMainWindow):
             self._refresh_all_styles()
             theme_display = "🌙 Dunkles" if theme_name == "dark" else "☀️ Helles"
             self.status_bar.showMessage(f"{theme_display} Theme aktiviert", 3000)
-
-    def _refresh_all_styles(self):
-        """Aktualisiert alle Styles nach Theme-Wechsel"""
-        # Menüleiste aktualisieren
-        self.menuBar().setStyleSheet(self._get_menu_bar_stylesheet())
-
-        # Eingabefeld aktualisieren
-        if hasattr(self, "task_input"):
-            self.task_input.setStyleSheet(self._get_line_edit_stylesheet())
-
-        # ComboBoxen aktualisieren
-        if hasattr(self, "category_input"):
-            self.category_input.setStyleSheet(self._get_combo_box_stylesheet())
-        if hasattr(self, "priority_input"):
-            self.priority_input.setStyleSheet(self._get_combo_box_stylesheet())
-        if hasattr(self, "category_filter"):
-            self.category_filter.setStyleSheet(self._get_filter_combo_stylesheet())
-        if hasattr(self, "sort_combo"):
-            self.sort_combo.setStyleSheet(self._get_filter_combo_stylesheet())
-
-        # Datum-Eingabe aktualisieren
-        if hasattr(self, "due_date_input"):
-            self.due_date_input.setStyleSheet(self._get_date_edit_stylesheet())
-
-        # Buttons aktualisieren
-        if hasattr(self, "add_button"):
-            self.add_button.setStyleSheet(self._get_primary_button_stylesheet())
-        if hasattr(self, "clear_button"):
-            self.clear_button.setStyleSheet(self._get_warning_button_stylesheet())
-        if hasattr(self, "clear_completed_button"):
-            self.clear_completed_button.setStyleSheet(
-                self._get_info_button_stylesheet()
-            )
-
-        # Liste aktualisieren
-        if hasattr(self, "task_list"):
-            self.task_list.setStyleSheet(self._get_list_widget_stylesheet())
-
-        # Labels aktualisieren
-        for child in self.findChildren(QLabel):
-            if "color:" in child.styleSheet():
-                current_style = child.styleSheet()
-                # Ersetze alte Textfarbe mit neuer
-                new_style = current_style.replace(
-                    "color: #ecf0f1", f"color: {self.styles.text_color}"
-                ).replace("color: #2c3e50", f"color: {self.styles.text_color}")
-                child.setStyleSheet(new_style)
-
-        # Aufgabenliste neu laden um Farben zu aktualisieren
-        self.refresh_listbox()
 
     # ===== BACKUP METHODS =====
 
@@ -814,7 +767,7 @@ class ToDoWindow(QMainWindow):
         counter_text = f"📊 Gesamt: {total_count} | ✅ Erledigt: {completed_count} | ⏳ Offen: {pending_count}"
         self.counter_label.setText(counter_text)
 
-    def update_category_filter(self):
+    def _update_category_filter(self):
         """Aktualisiert die Kategorie-Filter ComboBox"""
         current_selection = self.category_filter.currentText()
         self.category_filter.clear()
@@ -828,3 +781,114 @@ class ToDoWindow(QMainWindow):
                 self.category_filter.setCurrentIndex(index)
         except Exception:
             self.category_filter.addItems(["Alle", "Allgemein"])
+
+    def _refresh_all_styles(self):
+        """Aktualisiert alle Styles nach Theme-Wechsel"""
+        # Menüleiste aktualisieren
+        self.menuBar().setStyleSheet(self._get_menu_bar_stylesheet())
+
+        # Eingabefeld aktualisieren
+        if hasattr(self, "task_input"):
+            self.task_input.setStyleSheet(self._get_line_edit_stylesheet())
+
+        # ComboBoxen aktualisieren
+        if hasattr(self, "category_input"):
+            self.category_input.setStyleSheet(self._get_combo_box_stylesheet())
+        if hasattr(self, "priority_input"):
+            self.priority_input.setStyleSheet(self._get_combo_box_stylesheet())
+        if hasattr(self, "category_filter"):
+            self.category_filter.setStyleSheet(self._get_filter_combo_stylesheet())
+        if hasattr(self, "sort_combo"):
+            self.sort_combo.setStyleSheet(self._get_filter_combo_stylesheet())
+
+        # Datum-Eingabe aktualisieren
+        if hasattr(self, "due_date_input"):
+            self.due_date_input.setStyleSheet(self._get_date_edit_stylesheet())
+
+        # Buttons aktualisieren
+        if hasattr(self, "add_button"):
+            self.add_button.setStyleSheet(self._get_primary_button_stylesheet())
+        if hasattr(self, "clear_button"):
+            self.clear_button.setStyleSheet(self._get_warning_button_stylesheet())
+        if hasattr(self, "clear_completed_button"):
+            self.clear_completed_button.setStyleSheet(
+                self._get_info_button_stylesheet()
+            )
+
+        # Liste aktualisieren
+        if hasattr(self, "task_list"):
+            self.task_list.setStyleSheet(self._get_list_widget_stylesheet())
+
+        # Labels aktualisieren
+        for child in self.findChildren(QLabel):
+            if "color:" in child.styleSheet():
+                current_style = child.styleSheet()
+                # Ersetze alte Textfarbe mit neuer
+                new_style = current_style.replace(
+                    "color: #ecf0f1", f"color: {self.styles.text_color}"
+                ).replace("color: #2c3e50", f"color: {self.styles.text_color}")
+                child.setStyleSheet(new_style)
+
+        # Aufgabenliste neu laden um Farben zu aktualisieren
+        self.refresh_listbox()
+
+    def _reset_input_fields(self):
+        """Setzt die Eingabefelder zurück"""
+        self.task_input.clear()
+        self.category_input.setCurrentText("Allgemein")
+        self.priority_input.setCurrentIndex(1)
+
+    # ===== EFFICIENT UI UPDATE METHODS =====
+
+    def add_task_to_ui(self, task_data):
+        display_text = self._format_task_display(task_data)
+        item = QListWidgetItem(display_text)
+        item.setData(Qt.ItemDataRole.UserRole, task_data["id"])
+
+        today = QDate.currentDate()
+        self._apply_task_colors(item, task_data, today)
+
+        self.task_list.addItem(item)
+
+        self._update_counter()
+
+    def remove_task_from_ui(self, task_id):
+        for i in range(self.task_list.count()):
+            item = self.task_list.item(i)
+            if item and item.data(Qt.ItemDataRole.UserRole) == task_id:
+                self.task_list.takeItem(i)
+                self._update_counter()
+                break
+
+    def _update_task_in_ui(self, task_id, updated_task_data):
+        for i in range(self.task_list.count()):
+            item = self.task_list.item(i)
+            if item and item.data(Qt.ItemDataRole.UserRole) == task_id:
+                display_text = self._format_task_display(updated_task_data)
+                item.setText(display_text)
+
+                # Farben neu anwenden
+                today = QDate.currentDate()
+                self._apply_task_colors(item, updated_task_data, today)
+
+                self._update_counter()
+                break
+
+    def clear_completed_tasks_from_ui(self):
+        """Entfernt nur die erledigten Aufgaben aus der UI"""
+        items_to_remove = []
+
+        # Sammle Items, die entfernt werden sollen
+        for i in range(self.task_list.count()):
+            item = self.task_list.item(i)
+            if item:
+                task_id = item.data(Qt.ItemDataRole.UserRole)
+                task_data = self.task_manager.get_task_by_id(task_id)
+                if task_data and task_data.get("completed", False):
+                    items_to_remove.append(i)
+
+        # Entferne Items (rückwärts, um Indizes nicht zu verschieben)
+        for i in reversed(items_to_remove):
+            self.task_list.takeItem(i)
+
+        self._update_counter()

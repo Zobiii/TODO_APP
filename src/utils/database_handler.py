@@ -11,6 +11,7 @@ class DatabaseHandler:
         os.makedirs(app_folder_path, exist_ok=True)
         self.db_path = os.path.join(app_folder_path, db_name)
         self.connection = sqlite3.connect(self.db_path)
+        self.connection.row_factory = sqlite3.Row
         self._create_table()
         self._add_due_date_column_if_not_exists()
         self._add_category_priority_columns_if_not_exists()
@@ -148,3 +149,9 @@ class DatabaseHandler:
                 )
                 self.connection.commit()
                 logging.info("Spalte Priority hinzugefügt")
+
+    def execute_query(self, query, params=()):
+        with self.connection:  # Nutze die bestehende Verbindung
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
