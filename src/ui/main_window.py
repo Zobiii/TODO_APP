@@ -26,65 +26,106 @@ from ui.styles import AppStyles
 class ToDoWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self._initialize_managers()
+        self._setup_constants()
+        self._setup_window()
+        self._setup_ui()
+        self._initialize_data()
+
+    # ===== INITIALIZATION METHODS =====
+    def _initialize_managers(self):
+        """Initialisiert Task Manager und Styles"""
         self.task_manager = TaskManager()
         self.styles = AppStyles()
+
+    def _setup_constants(self):
+        """Definiert Konstanten für Sortierung und Prioritäten"""
         self.sort_options = {
             "Sortieren nach: Datum": "due_date ASC, id ASC",
             "Sortieren nach: Alphabet": "text ASC",
             "Sortieren nach: Status": "completed DESC, id ASC",
             "Sortieren nach: Priorität": "priority DESC, id ASC",
         }
-
         self.priority_options = {"🔴 Hoch": 3, "🟡 Mittel": 2, "🟢 Niedrig": 1}
 
+    def _setup_window(self):
+        """Konfiguriert das Hauptfenster"""
         self.setWindowTitle("ToDo-Liste")
         self.setGeometry(100, 100, 800, 900)
         self.setStyleSheet(
             f"background-color: {self.styles.bg_color}; color: {self.styles.text_color};"
         )
 
+    def _setup_ui(self):
+        """Erstellt die gesamte Benutzeroberfläche"""
         self.create_menu_bar()
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
-
         self.create_widgets()
-        self.refresh_listbox()
-        self.update_category_filter()
         self.status_bar = self.statusBar()
 
+    def _initialize_data(self):
+        """Lädt initiale Daten"""
+        self.refresh_listbox()
+        self.update_category_filter()
+
+    # ===== UI CREATION METHODS =====
+    def create_menu_bar(self):
+        """Erstellt die Menüleiste mit Backup-Optionen"""
+        menubar = self.menuBar()
+        menubar.setStyleSheet(self._get_menu_bar_stylesheet())
+
+        backup_menu = menubar.addMenu("Backup")
+
+        create_backup_action = QAction("📂 Backup erstellen", self)
+        create_backup_action.triggered.connect(self.create_backup)
+        backup_menu.addAction(create_backup_action)
+
+        restore_backup_action = QAction("🔄 Backup wiederherstellen", self)
+        restore_backup_action.triggered.connect(self.restore_backup)
+        backup_menu.addAction(restore_backup_action)
+
     def create_widgets(self):
-        # Titel
+        """Erstellt alle UI-Widgets"""
+        self._create_title()
+        self._create_input_section()
+        self._create_filter_section()
+        self._create_task_list()
+        self._create_action_buttons()
+
+    def _create_title(self):
+        """Erstellt den Titel"""
         title_label = QLabel("Meine ToDo-Liste")
         title_label.setFont(QFont(self.styles.title_font[0], self.styles.title_font[1]))
         title_label.setStyleSheet(f"color: {self.styles.text_color}; padding: 0px;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(title_label)
 
-        # Eingabefeld
+    def _create_input_section(self):
+        """Erstellt den Eingabebereich für neue Aufgaben"""
         input_frame = QVBoxLayout()
+
+        # Task Input
         self.task_input = QLineEdit()
         self.task_input.setPlaceholderText("Neue Aufgabe hinzufügen...")
-        self.task_input.setStyleSheet(
-            f"""
-            QLineEdit {{
-                background-color: {self.styles.bg_color};
-                border: 2px solid {self.styles.primary_color};
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 16px;
-                color: {self.styles.text_color};
-            }}
-        """
-        )
+        self.task_input.setStyleSheet(self._get_line_edit_stylesheet())
         self.task_input.returnPressed.connect(self.add_task)
         input_frame.addWidget(self.task_input)
 
-        # Kategorie und Priorität Eingabe
+        # Category and Priority
+        input_frame.addLayout(self._create_category_priority_inputs())
+
+        # Date and Add Button
+        input_frame.addLayout(self._create_date_section())
+
+        self.layout.addLayout(input_frame)
+
+    def _create_category_priority_inputs(self):
+        """Erstellt Kategorie- und Prioritätseingaben"""
         category_priority_frame = QHBoxLayout()
 
-        # Kategorie ComboBox
+        # Category
         cat_label = QLabel("🏷️ Kategorie:")
         cat_label.setStyleSheet(f"color: {self.styles.text_color}; font-size: 14px;")
         category_priority_frame.addWidget(cat_label)
@@ -94,8 +135,152 @@ class ToDoWindow(QMainWindow):
         self.category_input.addItems(
             ["Allgemein", "Arbeit", "Privat", "Einkaufen", "Sport", "Familie"]
         )
-        self.category_input.setStyleSheet(
-            f"""
+        self.category_input.setStyleSheet(self._get_combo_box_stylesheet())
+        category_priority_frame.addWidget(self.category_input)
+
+        # Priority
+        prio_label = QLabel("⚡ Priorität:")
+        prio_label.setStyleSheet(f"color: {self.styles.text_color}; font-size: 14px;")
+        category_priority_frame.addWidget(prio_label)
+
+        self.priority_input = QComboBox()
+        self.priority_input.addItems(self.priority_options.keys())
+        self.priority_input.setCurrentIndex(1)  # Standard: Mittel
+        self.priority_input.setStyleSheet(self._get_combo_box_stylesheet())
+        category_priority_frame.addWidget(self.priority_input)
+
+        return category_priority_frame
+
+    def _create_date_section(self):
+        """Erstellt Datum- und Hinzufügen-Button"""
+        date_button_frame = QVBoxLayout()
+
+        self.due_date_input = QDateEdit()
+        self.due_date_input.setCalendarPopup(True)
+        self.due_date_input.setDate(QDate.currentDate())
+        self.due_date_input.setStyleSheet(self._get_date_edit_stylesheet())
+        date_button_frame.addWidget(self.due_date_input)
+
+        self.add_button = QPushButton("➕ Hinzufügen")
+        self.add_button.setStyleSheet(self._get_primary_button_stylesheet())
+        self.add_button.clicked.connect(self.add_task)
+        date_button_frame.addWidget(self.add_button)
+
+        return date_button_frame
+
+    def _create_filter_section(self):
+        """Erstellt Filter- und Sortierbereich"""
+        # Category Filter
+        filter_frame = QVBoxLayout()
+        filter_label = QLabel("🏷️ Kategorie filtern:")
+        filter_label.setStyleSheet(
+            f"color: {self.styles.text_color}; font-size: 14px; font-weight: bold;"
+        )
+        filter_frame.addWidget(filter_label)
+
+        self.category_filter = QComboBox()
+        self.category_filter.setStyleSheet(self._get_filter_combo_stylesheet())
+        self.category_filter.currentIndexChanged.connect(self.refresh_listbox)
+        filter_frame.addWidget(self.category_filter)
+        self.layout.addLayout(filter_frame)
+
+        # Sort Options
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(self.sort_options.keys())
+        self.sort_combo.setStyleSheet(self._get_filter_combo_stylesheet())
+        self.sort_combo.currentIndexChanged.connect(self.refresh_listbox)
+        self.layout.addWidget(self.sort_combo)
+
+    def _create_task_list(self):
+        """Erstellt die Aufgabenliste"""
+        list_frame = QVBoxLayout()
+        self.task_list = QListWidget()
+        self.task_list.setStyleSheet(self._get_list_widget_stylesheet())
+        self.task_list.itemDoubleClicked.connect(self.edit_task)
+        self.task_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.task_list.customContextMenuRequested.connect(self.show_context_menu)
+
+        self.task_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.task_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        list_frame.addWidget(self.task_list)
+        self.layout.addLayout(list_frame)
+
+    def _create_action_buttons(self):
+        """Erstellt die Action-Buttons"""
+        button_frame = QVBoxLayout()
+
+        self.clear_button = QPushButton("🧹 Alle löschen")
+        self.clear_button.setStyleSheet(self._get_warning_button_stylesheet())
+        self.clear_button.clicked.connect(self.clear_all_tasks)
+        button_frame.addWidget(self.clear_button)
+
+        self.clear_completed_button = QPushButton("🗂️ Erledigte löschen")
+        self.clear_completed_button.setStyleSheet(self._get_info_button_stylesheet())
+        self.clear_completed_button.clicked.connect(self.clear_completed_tasks)
+        button_frame.addWidget(self.clear_completed_button)
+
+        self.counter_label = QLabel("")
+        self.counter_label.setStyleSheet(
+            f"color: {self.styles.text_color}; font-size: 12px;"
+        )
+        button_frame.addWidget(self.counter_label)
+
+        self.layout.addLayout(button_frame)
+
+    # ===== STYLESHEET METHODS =====
+    def _get_menu_bar_stylesheet(self):
+        """Stylesheet für die Menüleiste"""
+        return f"""
+            QMenuBar {{
+                background-color: {self.styles.bg_color};
+                color: {self.styles.text_color};
+                border-bottom: 1px solid {self.styles.secondary_color};
+                padding: 4px;
+            }}
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 8px 12px;
+                border-radius: 4px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {self.styles.secondary_color};
+            }}
+            QMenu {{
+                background-color: {self.styles.bg_color};
+                color: {self.styles.text_color};
+                border: 1px solid {self.styles.secondary_color};
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 8px 20px;
+                border-radius: 4px;
+                margin: 2px;
+            }}
+            QMenu::item:selected {{
+                background-color: {self.styles.secondary_color};
+            }}
+        """
+
+    def _get_line_edit_stylesheet(self):
+        """Stylesheet für Eingabefelder"""
+        return f"""
+            QLineEdit {{
+                background-color: {self.styles.bg_color};
+                border: 2px solid {self.styles.primary_color};
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 16px;
+                color: {self.styles.text_color};
+            }}
+        """
+
+    def _get_combo_box_stylesheet(self):
+        """Stylesheet für ComboBoxen"""
+        return f"""
             QComboBox {{
                 background-color: {self.styles.bg_color};
                 border: 2px solid {self.styles.primary_color};
@@ -114,27 +299,17 @@ class ToDoWindow(QMainWindow):
                 border: 1px solid {self.styles.secondary_color};
             }}
         """
-        )
-        category_priority_frame.addWidget(self.category_input)
 
-        # Priorität ComboBox
-        prio_label = QLabel("⚡ Priorität:")
-        prio_label.setStyleSheet(f"color: {self.styles.text_color}; font-size: 14px;")
-        category_priority_frame.addWidget(prio_label)
-
-        self.priority_input = QComboBox()
-        self.priority_input.addItems(self.priority_options.keys())
-        self.priority_input.setCurrentIndex(1)  # Standard: Mittel
-        self.priority_input.setStyleSheet(
-            f"""
+    def _get_filter_combo_stylesheet(self):
+        """Stylesheet für Filter-ComboBoxen"""
+        return f"""
             QComboBox {{
                 background-color: {self.styles.bg_color};
-                border: 2px solid {self.styles.primary_color};
+                border: 1px solid {self.styles.secondary_color};
                 border-radius: 5px;
-                padding: 8px;
+                padding: 5px;
                 font-size: 14px;
                 color: {self.styles.text_color};
-                min-width: 100px;
             }}
             QComboBox::drop-down {{
                 border: none;
@@ -145,28 +320,16 @@ class ToDoWindow(QMainWindow):
                 border: 1px solid {self.styles.secondary_color};
             }}
         """
-        )
-        category_priority_frame.addWidget(self.priority_input)
 
-        input_frame.addLayout(category_priority_frame)
-
-        date_button_frame = QVBoxLayout()
-
-        self.due_date_input = QDateEdit()
-        self.due_date_input.setCalendarPopup(True)
-        self.due_date_input.setDate(QDate.currentDate())
-
-        # Erstelle einen robusten, absoluten Pfad zum Icon
-        script_dir = os.path.dirname(__file__)  # Pfad zum ui-Ordner
-        project_root = os.path.abspath(
-            os.path.join(script_dir, "..", "..")
-        )  # Gehe zwei Ebenen hoch zum Projekt-Root
+    def _get_date_edit_stylesheet(self):
+        """Stylesheet für Datum-Eingabe"""
+        script_dir = os.path.dirname(__file__)
+        project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
         icon_path = os.path.join(project_root, "icons", "calendar.svg").replace(
             "\\", "/"
         )
 
-        self.due_date_input.setStyleSheet(
-            f"""
+        return f"""
             QDateEdit {{
                 background-color: {self.styles.bg_color};
                 border: 2px solid {self.styles.primary_color};
@@ -230,11 +393,9 @@ class ToDoWindow(QMainWindow):
                 border-radius: 16px;
                 gridline-color: transparent;
                 padding-bottom: 0px;
-                
             }}
-
             QCalendarWidget QAbstractItemView:item {{
-                background-color:  transparent;
+                background-color: transparent;
                 padding-bottom: 10px;
                 padding-top: 20px;
                 padding-left: 5px;
@@ -242,14 +403,11 @@ class ToDoWindow(QMainWindow):
             QCalendarWidget QAbstractItemView:item:selected {{
                 color: {self.styles.warning_color};
             }}
-            """
-        )
+        """
 
-        date_button_frame.addWidget(self.due_date_input)
-
-        self.add_button = QPushButton("➕ Hinzufügen")
-        self.add_button.setStyleSheet(
-            f"""
+    def _get_primary_button_stylesheet(self):
+        """Stylesheet für primäre Buttons"""
+        return f"""
             QPushButton {{
                 background-color: {self.styles.primary_color};
                 border: none;
@@ -262,70 +420,42 @@ class ToDoWindow(QMainWindow):
                 background-color: #2980b9;
             }}
         """
-        )
-        self.add_button.clicked.connect(self.add_task)
-        input_frame.addWidget(self.add_button)
 
-        input_frame.addLayout(date_button_frame)
-
-        self.layout.addLayout(input_frame)
-
-        filter_frame = QVBoxLayout()
-        filter_label = QLabel("🏷️ Kategorie filtern:")
-        filter_label.setStyleSheet(
-            f"color: {self.styles.text_color}; font-size: 14px; font-weight: bold;"
-        )
-        filter_frame.addWidget(filter_label)
-
-        self.category_filter = QComboBox()
-        self.category_filter.setStyleSheet(
-            f"""
-            QComboBox {{
-                background-color: {self.styles.bg_color};
-                border: 1px solid {self.styles.secondary_color};
-                border-radius: 5px;
-                padding: 5px;
-                font-size: 14px;
-                color: {self.styles.text_color};
-            }}
-            QComboBox::drop-down {{
+    def _get_warning_button_stylesheet(self):
+        """Stylesheet für Warning-Buttons"""
+        return f"""
+            QPushButton {{
+                background-color: {self.styles.warning_color};
                 border: none;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 16px;
+                color: white;
             }}
-            QComboBox QAbstractItemView {{
-                background-color: {self.styles.bg_color};
-                color: {self.styles.text_color};
-                border: 1px solid {self.styles.secondary_color};
+            QPushButton:hover {{
+                background-color: #e68900;
             }}
         """
-        )
-        self.category_filter.currentIndexChanged.connect(self.refresh_listbox)
-        filter_frame.addWidget(self.category_filter)
-        self.layout.addLayout(filter_frame)
 
-        self.sort_combo = QComboBox()
-        self.sort_combo.addItems(self.sort_options.keys())
-        self.sort_combo.setStyleSheet(
-            f"""
-            QComboBox {{
-                background-color: {self.styles.bg_color};
-                border: 1px solid {self.styles.secondary_color};
-                border-radius: 5px;
-                padding: 5px;
-                font-size: 14px;
-            }}
-            QComboBox::drop-down {{
+    def _get_info_button_stylesheet(self):
+        """Stylesheet für Info-Buttons"""
+        return f"""
+            QPushButton {{
+                background-color: {self.styles.info_color};
                 border: none;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 16px;
+                color: white;
+            }}
+            QPushButton:hover {{
+                background-color: #138496;
             }}
         """
-        )
-        self.sort_combo.currentIndexChanged.connect(self.refresh_listbox)
-        self.layout.addWidget(self.sort_combo)
 
-        # Aufgabenliste mit Scrollbar
-        list_frame = QVBoxLayout()
-        self.task_list = QListWidget()
-        self.task_list.setStyleSheet(
-            f"""
+    def _get_list_widget_stylesheet(self):
+        """Stylesheet für die Aufgabenliste"""
+        return f"""
             QListWidget {{
                 background-color: {self.styles.bg_color};
                 border: 1px solid {self.styles.secondary_color};
@@ -339,82 +469,10 @@ class ToDoWindow(QMainWindow):
                 color: white;
             }}
         """
-        )
-        self.task_list.itemDoubleClicked.connect(self.edit_task)
-        self.task_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.task_list.customContextMenuRequested.connect(self.show_context_menu)
-        list_frame.addWidget(self.task_list)
 
-        self.task_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.task_list.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.layout.addLayout(list_frame)
-
-        # Buttons für Aktionen
-        button_frame = QVBoxLayout()
-        second_row = QVBoxLayout()
-        self.clear_button = QPushButton("🧹 Alle löschen")
-        self.clear_button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.styles.warning_color};
-                border: none;
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 16px;
-                color: white;
-            }}
-            QPushButton:hover {{
-                background-color: #e68900;
-            }}
-        """
-        )
-        self.clear_button.clicked.connect(self.clear_all_tasks)
-        second_row.addWidget(self.clear_button)
-
-        self.clear_completed_button = QPushButton("🗂️ Erledigte löschen")
-        self.clear_completed_button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.styles.info_color};
-                border: none;
-                border-radius: 5px;
-                padding: 10px;
-                font-size: 16px;
-                color: white;
-            }}
-            QPushButton:hover {{
-                background-color: #138496;
-            }}
-        """
-        )
-        self.clear_completed_button.clicked.connect(self.clear_completed_tasks)
-        second_row.addWidget(self.clear_completed_button)
-
-        self.counter_label = QLabel("")
-        self.counter_label.setStyleSheet(
-            f"color: {self.styles.text_color}; font-size: 12px;"
-        )
-        second_row.addWidget(self.counter_label)
-
-        button_frame.addLayout(second_row)
-        self.layout.addLayout(button_frame)
-
-    def show_context_menu(self, position):
-        item = self.task_list.itemAt(position)
-        if not item:
-            return
-
-        task_id = item.data(Qt.ItemDataRole.UserRole)
-        all_tasks = self.task_manager.get_tasks()
-        current_task = next((task for task in all_tasks if task["id"] == task_id), None)
-        if not current_task:
-            return
-
-        context_menu = QMenu(self)
-        context_menu.setStyleSheet(
-            f"""
+    def _get_context_menu_stylesheet(self):
+        """Stylesheet für Kontextmenü"""
+        return f"""
             QMenu {{
                 background-color: {self.styles.bg_color};
                 border: 2px solid {self.styles.text_color};
@@ -426,22 +484,38 @@ class ToDoWindow(QMainWindow):
                 border-radius: 4px;
                 margin: 2px;
                 color: black;
-                border: 1px solid {self.styles.text_color}; /* Rahmen für jeden Button */
+                border: 1px solid {self.styles.text_color};
             }}
             QMenu::item:selected {{
                 background-color: {self.styles.secondary_color};
                 color: white;
-                border: 1px solid {self.styles.text_color}; /* Rahmenfarbe bei Hover anpassen */
+                border: 1px solid {self.styles.text_color};
             }}
             QMenu::separator {{
                 height: 2px;
                 background: {self.styles.text_color};
                 margin: 4px 4px;
             }}
-            """
-        )
+        """
 
-        # Aktion: Erledigen / Rückgängig
+    # ===== EVENT HANDLER METHODS =====
+
+    def show_context_menu(self, position):
+        """Zeigt das Kontextmenü für Aufgaben"""
+        item = self.task_list.itemAt(position)
+        if not item:
+            return
+
+        task_id = item.data(Qt.ItemDataRole.UserRole)
+        all_tasks = self.task_manager.get_tasks()
+        current_task = next((task for task in all_tasks if task["id"] == task_id), None)
+        if not current_task:
+            return
+
+        context_menu = QMenu(self)
+        context_menu.setStyleSheet(self._get_context_menu_stylesheet())
+
+        # Actions erstellen
         if not current_task["completed"]:
             toggle_action = QAction("✅ Als erledigt markieren", self)
         else:
@@ -450,14 +524,12 @@ class ToDoWindow(QMainWindow):
         toggle_action.triggered.connect(lambda: self.toggle_task_completion(item))
         context_menu.addAction(toggle_action)
 
-        # Aktion: Bearbeiten
         edit_action = QAction("✏️ Bearbeiten", self)
         edit_action.triggered.connect(lambda: self.edit_task(item))
         context_menu.addAction(edit_action)
 
         context_menu.addSeparator()
 
-        # Aktion: Löschen
         delete_action = QAction("🗑️ Löschen", self)
         delete_action.triggered.connect(lambda: self.delete_task(item))
         context_menu.addAction(delete_action)
@@ -465,40 +537,9 @@ class ToDoWindow(QMainWindow):
         context_menu.exec(self.task_list.mapToGlobal(position))
 
     def create_menu_bar(self):
+        """Erstellt die Menüleiste"""
         menubar = self.menuBar()
-        menubar.setStyleSheet(
-            f"""
-            QMenuBar {{
-                background-color: {self.styles.bg_color};
-                color: {self.styles.text_color};
-                border-bottom: 1px solid {self.styles.secondary_color};
-                padding: 4px;
-            }}
-            QMenuBar::item {{
-                background-color: transparent;
-                padding: 8px 12px;
-                border-radius: 4px;
-            }}
-            QMenuBar::item:selected {{
-                background-color: {self.styles.secondary_color};
-            }}
-            QMenu {{
-                background-color: {self.styles.bg_color};
-                color: {self.styles.text_color};
-                border: 1px solid {self.styles.secondary_color};
-                border-radius: 4px;
-                padding: 4px;
-            }}
-            QMenu::item {{
-                padding: 8px 20px;
-                border-radius: 4px;
-                margin: 2px;
-            }}
-            QMenu::item:selected {{
-                background-color: {self.styles.secondary_color};
-            }}
-        """
-        )
+        menubar.setStyleSheet(self._get_menu_bar_stylesheet())
 
         backup_menu = menubar.addMenu("Backup")
         create_backup_action = QAction("📂 Backup erstellen", self)
@@ -509,7 +550,10 @@ class ToDoWindow(QMainWindow):
         restore_backup_action.triggered.connect(self.restore_backup)
         backup_menu.addAction(restore_backup_action)
 
+    # ===== TASK MANAGEMENT METHODS =====
+
     def add_task(self):
+        """Fügt eine neue Aufgabe hinzu"""
         task = self.task_input.text().strip()
         due_date = self.due_date_input.date().toString("yyyy-MM-dd")
         category = self.category_input.currentText() or "Allgemein"
@@ -517,16 +561,21 @@ class ToDoWindow(QMainWindow):
 
         if task:
             self.task_manager.add_task(task, due_date, category, priority)
-            self.task_input.clear()
-            self.category_input.setCurrentText("Allgemein")
-            self.priority_input.setCurrentIndex(1)
+            self._reset_input_fields()
             self.status_bar.showMessage("✅ Aufgabe hinzugefügt", 5000)
             self.refresh_listbox()
             self.update_category_filter()
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe eingeben!")
 
+    def _reset_input_fields(self):
+        """Setzt die Eingabefelder zurück"""
+        self.task_input.clear()
+        self.category_input.setCurrentText("Allgemein")
+        self.priority_input.setCurrentIndex(1)
+
     def delete_task(self, item=None):
+        """Löscht eine Aufgabe"""
         if not item:
             item = self.task_list.currentItem()
 
@@ -539,94 +588,8 @@ class ToDoWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
 
-    def clear_all_tasks(self):
-        if self.task_manager.has_tasks():
-            result = QMessageBox.question(
-                self,
-                "Bestätigung",
-                "Alle Aufgaben löschen?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if result == QMessageBox.StandardButton.Yes:
-                self.task_manager.clear_all_tasks()
-                self.refresh_listbox()
-                self.update_category_filter()
-
-    def refresh_listbox(self):
-        """Aktualisiert die Aufgabenliste basierend auf der aktuellen Sortierung und Filterung."""
-        current_sort_text = self.sort_combo.currentText()
-        sort_by_clause = self.sort_options.get(current_sort_text, "id ASC")
-
-        # Kategorie-Filter
-        category_filter = self.category_filter.currentText()
-        if category_filter == "Alle":
-            category_filter = None
-
-        self.task_list.clear()
-        tasks = self.task_manager.get_tasks(
-            sort_by=sort_by_clause, category_filter=category_filter
-        )
-
-        if not isinstance(tasks, list):
-            tasks = []
-
-        today = QDate.currentDate()
-        for task in tasks:
-            due_date_str = task.get("due_date")
-            category = task.get("category", "Allgemein")
-            priority = task.get("priority", 1)
-
-            # Priorität Icon
-            priority_icon = "🔴" if priority == 3 else "🟡" if priority == 2 else "🟢"
-
-            display_text = (
-                f"✅ {priority_icon} [{category}] {task['text']}"
-                if task["completed"]
-                else f"⏳ {priority_icon} [{category}] {task['text']}"
-            )
-
-            if due_date_str:
-                display_text += f"  (Fällig: {due_date_str})"
-
-            item = QListWidgetItem(display_text)
-            item.setData(Qt.ItemDataRole.UserRole, task["id"])
-            self.task_list.addItem(item)
-
-            # Farben für überfällige Aufgaben
-            if due_date_str and not task["completed"]:
-                due_date = QDate.fromString(due_date_str, "yyyy-MM-dd")
-                if due_date.isValid():
-                    if due_date < today:
-                        item.setForeground(QColor(self.styles.danger_color))
-                    elif due_date == today:
-                        item.setForeground(QColor(self.styles.warning_color))
-
-        # Counter Update
-        total_count = self.task_manager.get_total_count()
-        completed_count = self.task_manager.get_completed_count()
-        pending_count = self.task_manager.get_pending_count()
-
-        counter_text = f"📊 Gesamt: {total_count} | ✅ Erledigt: {completed_count} | ⏳ Offen: {pending_count}"
-        self.counter_label.setText(counter_text)
-
-    def update_category_filter(self):
-        """Aktualisiert die Kategorie-Filter ComboBox"""
-        current_selection = self.category_filter.currentText()
-        self.category_filter.clear()
-
-        try:
-            categories = ["Alle"] + self.task_manager.get_categories()
-            self.category_filter.addItems(categories)
-
-            # Versuche die vorherige Auswahl beizubehalten
-            index = self.category_filter.findText(current_selection)
-            if index >= 0:
-                self.category_filter.setCurrentIndex(index)
-        except Exception as e:
-            # Fallback falls get_categories() noch nicht implementiert ist
-            self.category_filter.addItems(["Alle", "Allgemein"])
-
     def toggle_task_completion(self, item=None):
+        """Ändert den Erledigungsstatus einer Aufgabe"""
         if not item:
             item = self.task_list.currentItem()
 
@@ -637,25 +600,8 @@ class ToDoWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Hinweis", "Bitte eine Aufgabe auswählen!")
 
-    def clear_completed_tasks(self):
-        completed_count = self.task_manager.get_completed_count()
-        if completed_count > 0:
-            result = QMessageBox.question(
-                self,
-                "Bestätigung",
-                f"{completed_count} erledigte Aufgaben löschen?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if result == QMessageBox.StandardButton.Yes:
-                self.task_manager.clear_completed_tasks()
-                self.refresh_listbox()
-                self.update_category_filter()
-        else:
-            QMessageBox.information(
-                self, "Info", "Keine erledigten Aufgaben vorhanden!"
-            )
-
     def edit_task(self, item):
+        """Bearbeitet eine Aufgabe"""
         if not item:
             item = self.task_list.currentItem()
 
@@ -677,7 +623,43 @@ class ToDoWindow(QMainWindow):
                 self.task_manager.update_task_text(task_id, new_text.strip())
                 self.refresh_listbox()
 
+    def clear_all_tasks(self):
+        """Löscht alle Aufgaben"""
+        if self.task_manager.has_tasks():
+            result = QMessageBox.question(
+                self,
+                "Bestätigung",
+                "Alle Aufgaben löschen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if result == QMessageBox.StandardButton.Yes:
+                self.task_manager.clear_all_tasks()
+                self.refresh_listbox()
+                self.update_category_filter()
+
+    def clear_completed_tasks(self):
+        """Löscht alle erledigten Aufgaben"""
+        completed_count = self.task_manager.get_completed_count()
+        if completed_count > 0:
+            result = QMessageBox.question(
+                self,
+                "Bestätigung",
+                f"{completed_count} erledigte Aufgaben löschen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if result == QMessageBox.StandardButton.Yes:
+                self.task_manager.clear_completed_tasks()
+                self.refresh_listbox()
+                self.update_category_filter()
+        else:
+            QMessageBox.information(
+                self, "Info", "Keine erledigten Aufgaben vorhanden!"
+            )
+
+    # ===== BACKUP METHODS =====
+
     def create_backup(self):
+        """Erstellt ein Backup der Datenbank"""
         backup_path, _ = QFileDialog.getSaveFileName(
             self, "Backup erstellen", "todo", "Datenbank (*.db)"
         )
@@ -691,6 +673,7 @@ class ToDoWindow(QMainWindow):
                 )
 
     def restore_backup(self):
+        """Stellt ein Backup der Datenbank wieder her"""
         backup_path, _ = QFileDialog.getOpenFileName(
             self, "Backup wiederherstellen", "", "Datenbank (*.db)"
         )
@@ -706,3 +689,85 @@ class ToDoWindow(QMainWindow):
                 QMessageBox.critical(
                     self, "Fehler", "Backup konnte nicht wiederhergestellt werden."
                 )
+
+    # ===== DATA UPDATE METHODS =====
+
+    def refresh_listbox(self):
+        """Aktualisiert die Aufgabenliste basierend auf Sortierung und Filterung"""
+        current_sort_text = self.sort_combo.currentText()
+        sort_by_clause = self.sort_options.get(current_sort_text, "id ASC")
+
+        category_filter = self.category_filter.currentText()
+        if category_filter == "Alle":
+            category_filter = None
+
+        self.task_list.clear()
+        tasks = self.task_manager.get_tasks(
+            sort_by=sort_by_clause, category_filter=category_filter
+        )
+
+        if not isinstance(tasks, list):
+            tasks = []
+
+        today = QDate.currentDate()
+        for task in tasks:
+            display_text = self._format_task_display(task)
+            item = QListWidgetItem(display_text)
+            item.setData(Qt.ItemDataRole.UserRole, task["id"])
+            self.task_list.addItem(item)
+
+            # Farben für überfällige Aufgaben
+            self._apply_task_colors(item, task, today)
+
+        self._update_counter()
+
+    def _format_task_display(self, task):
+        """Formatiert die Anzeige einer Aufgabe"""
+        due_date_str = task.get("due_date")
+        category = task.get("category", "Allgemein")
+        priority = task.get("priority", 1)
+
+        priority_icon = "🔴" if priority == 3 else "🟡" if priority == 2 else "🟢"
+        status_icon = "✅" if task["completed"] else "⏳"
+
+        display_text = f"{status_icon} {priority_icon} [{category}] {task['text']}"
+
+        if due_date_str:
+            display_text += f"  (Fällig: {due_date_str})"
+
+        return display_text
+
+    def _apply_task_colors(self, item, task, today):
+        """Wendet Farben basierend auf Fälligkeitsdatum an"""
+        due_date_str = task.get("due_date")
+        if due_date_str and not task["completed"]:
+            due_date = QDate.fromString(due_date_str, "yyyy-MM-dd")
+            if due_date.isValid():
+                if due_date < today:
+                    item.setForeground(QColor(self.styles.danger_color))
+                elif due_date == today:
+                    item.setForeground(QColor(self.styles.warning_color))
+
+    def _update_counter(self):
+        """Aktualisiert die Aufgaben-Statistiken"""
+        total_count = self.task_manager.get_total_count()
+        completed_count = self.task_manager.get_completed_count()
+        pending_count = self.task_manager.get_pending_count()
+
+        counter_text = f"📊 Gesamt: {total_count} | ✅ Erledigt: {completed_count} | ⏳ Offen: {pending_count}"
+        self.counter_label.setText(counter_text)
+
+    def update_category_filter(self):
+        """Aktualisiert die Kategorie-Filter ComboBox"""
+        current_selection = self.category_filter.currentText()
+        self.category_filter.clear()
+
+        try:
+            categories = ["Alle"] + self.task_manager.get_categories()
+            self.category_filter.addItems(categories)
+
+            index = self.category_filter.findText(current_selection)
+            if index >= 0:
+                self.category_filter.setCurrentIndex(index)
+        except Exception:
+            self.category_filter.addItems(["Alle", "Allgemein"])
