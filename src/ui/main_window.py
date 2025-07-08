@@ -71,21 +71,6 @@ class ToDoWindow(QMainWindow):
         self.update_category_filter()
 
     # ===== UI CREATION METHODS =====
-    def create_menu_bar(self):
-        """Erstellt die Menüleiste mit Backup-Optionen"""
-        menubar = self.menuBar()
-        menubar.setStyleSheet(self._get_menu_bar_stylesheet())
-
-        backup_menu = menubar.addMenu("Backup")
-
-        create_backup_action = QAction("📂 Backup erstellen", self)
-        create_backup_action.triggered.connect(self.create_backup)
-        backup_menu.addAction(create_backup_action)
-
-        restore_backup_action = QAction("🔄 Backup wiederherstellen", self)
-        restore_backup_action.triggered.connect(self.restore_backup)
-        backup_menu.addAction(restore_backup_action)
-
     def create_widgets(self):
         """Erstellt alle UI-Widgets"""
         self._create_title()
@@ -498,6 +483,9 @@ class ToDoWindow(QMainWindow):
             }}
         """
 
+    def _switch_theme_stylesheet(self):
+        return f"background-color: {self.styles.bg_color}; color: {self.styles.text_color};"
+
     # ===== EVENT HANDLER METHODS =====
 
     def show_context_menu(self, position):
@@ -537,11 +525,12 @@ class ToDoWindow(QMainWindow):
         context_menu.exec(self.task_list.mapToGlobal(position))
 
     def create_menu_bar(self):
-        """Erstellt die Menüleiste"""
+        """Erstellt die Menüleiste mit Backup-Optionen"""
         menubar = self.menuBar()
         menubar.setStyleSheet(self._get_menu_bar_stylesheet())
 
         backup_menu = menubar.addMenu("Backup")
+
         create_backup_action = QAction("📂 Backup erstellen", self)
         create_backup_action.triggered.connect(self.create_backup)
         backup_menu.addAction(create_backup_action)
@@ -549,6 +538,17 @@ class ToDoWindow(QMainWindow):
         restore_backup_action = QAction("🔄 Backup wiederherstellen", self)
         restore_backup_action.triggered.connect(self.restore_backup)
         backup_menu.addAction(restore_backup_action)
+
+        theme_menu = menubar.addMenu("Themes")
+
+        dark_theme_action = QAction("🌙 Dunkles Theme", self)
+        dark_theme_action.triggered.connect(lambda: self.switch_theme("dark"))
+        theme_menu.addAction(dark_theme_action)
+
+        # Helles Theme
+        light_theme_action = QAction("☀️ Helles Theme", self)
+        light_theme_action.triggered.connect(lambda: self.switch_theme("light"))
+        theme_menu.addAction(light_theme_action)
 
     # ===== TASK MANAGEMENT METHODS =====
 
@@ -655,6 +655,63 @@ class ToDoWindow(QMainWindow):
             QMessageBox.information(
                 self, "Info", "Keine erledigten Aufgaben vorhanden!"
             )
+
+    def switch_theme(self, theme_name):
+        if self.styles.switch_theme(theme_name):
+            self.setStyleSheet(self._switch_theme_stylesheet())
+            self._refresh_all_styles()
+            theme_display = "🌙 Dunkles" if theme_name == "dark" else "☀️ Helles"
+            self.status_bar.showMessage(f"{theme_display} Theme aktiviert", 3000)
+
+    def _refresh_all_styles(self):
+        """Aktualisiert alle Styles nach Theme-Wechsel"""
+        # Menüleiste aktualisieren
+        self.menuBar().setStyleSheet(self._get_menu_bar_stylesheet())
+
+        # Eingabefeld aktualisieren
+        if hasattr(self, "task_input"):
+            self.task_input.setStyleSheet(self._get_line_edit_stylesheet())
+
+        # ComboBoxen aktualisieren
+        if hasattr(self, "category_input"):
+            self.category_input.setStyleSheet(self._get_combo_box_stylesheet())
+        if hasattr(self, "priority_input"):
+            self.priority_input.setStyleSheet(self._get_combo_box_stylesheet())
+        if hasattr(self, "category_filter"):
+            self.category_filter.setStyleSheet(self._get_filter_combo_stylesheet())
+        if hasattr(self, "sort_combo"):
+            self.sort_combo.setStyleSheet(self._get_filter_combo_stylesheet())
+
+        # Datum-Eingabe aktualisieren
+        if hasattr(self, "due_date_input"):
+            self.due_date_input.setStyleSheet(self._get_date_edit_stylesheet())
+
+        # Buttons aktualisieren
+        if hasattr(self, "add_button"):
+            self.add_button.setStyleSheet(self._get_primary_button_stylesheet())
+        if hasattr(self, "clear_button"):
+            self.clear_button.setStyleSheet(self._get_warning_button_stylesheet())
+        if hasattr(self, "clear_completed_button"):
+            self.clear_completed_button.setStyleSheet(
+                self._get_info_button_stylesheet()
+            )
+
+        # Liste aktualisieren
+        if hasattr(self, "task_list"):
+            self.task_list.setStyleSheet(self._get_list_widget_stylesheet())
+
+        # Labels aktualisieren
+        for child in self.findChildren(QLabel):
+            if "color:" in child.styleSheet():
+                current_style = child.styleSheet()
+                # Ersetze alte Textfarbe mit neuer
+                new_style = current_style.replace(
+                    "color: #ecf0f1", f"color: {self.styles.text_color}"
+                ).replace("color: #2c3e50", f"color: {self.styles.text_color}")
+                child.setStyleSheet(new_style)
+
+        # Aufgabenliste neu laden um Farben zu aktualisieren
+        self.refresh_listbox()
 
     # ===== BACKUP METHODS =====
 

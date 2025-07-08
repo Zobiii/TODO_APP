@@ -13,7 +13,7 @@ logging.basicConfig(
 
 def main():
     app = QApplication([])
-    logging.info(f"Starting the application.")
+    logging.info(f"Starting the application")
 
     base_dir = os.path.dirname(__file__)
     icon_path = os.path.join(base_dir, "../assets/notepad_icon.png")
